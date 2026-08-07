@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MapLibreView from '../map/MapLibreView';
 import { wsService } from '../../services/websocketService';
+import { calculateHaversineDistance } from '../../utils/geoUtils';
 
 export default function CoursePlanner({
   course,
@@ -21,6 +22,41 @@ export default function CoursePlanner({
     setDuration(course.durationMinutes);
     setTheme(course.theme);
     setStartName(course.startLocation.name);
+  }, [course]);
+
+  // Dynamically calculate Spatial Analysis metrics based on Start/Finish Location & Waypoints
+  const courseMetrics = useMemo(() => {
+    if (!course || !course.clues || course.clues.length === 0) {
+      return { totalDistanceKm: '0.8 km', estTime: '25m', count: 0 };
+    }
+
+    let totalMeters = 0;
+    let curr = { lat: course.startLocation.lat, lng: course.startLocation.lng };
+
+    course.clues.forEach(clue => {
+      totalMeters += calculateHaversineDistance(curr.lat, curr.lng, clue.targetLocation.lat, clue.targetLocation.lng);
+      curr = { lat: clue.targetLocation.lat, lng: clue.targetLocation.lng };
+    });
+
+    // Add return segment if finish location is specified
+    if (course.finishLocation) {
+      totalMeters += calculateHaversineDistance(curr.lat, curr.lng, course.finishLocation.lat, course.finishLocation.lng);
+    }
+
+    const totalKm = (totalMeters / 1000).toFixed(1);
+    const walkMinutes = Math.round((totalMeters / 1000) / 4.5 * 60);
+    const taskMinutes = course.clues.length * 12;
+    const totalMinutes = walkMinutes + taskMinutes;
+
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    const estTimeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+    return {
+      totalDistanceKm: `${totalKm} km`,
+      estTime: estTimeStr,
+      count: course.clues.length
+    };
   }, [course]);
 
   // Notification Toast State
@@ -86,7 +122,7 @@ export default function CoursePlanner({
       number: course.clues.length + 1,
       title: newClueTitle,
       category: newClueCategory,
-      description: newClueDesc || 'Custom waypoint added in Rathmines NSW',
+      description: newClueDesc || 'Custom waypoint added to course',
       targetLocation: { lat: parseFloat(newClueLat), lng: parseFloat(newClueLng) },
       points: 500,
       targetRadiusMeters: 25,
@@ -273,7 +309,7 @@ export default function CoursePlanner({
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">03</div>
-                  <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues</h2>
+                  <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues ({course.clues.length})</h2>
                 </div>
                 <button
                   onClick={() => setIsAddingClue(true)}
@@ -299,7 +335,7 @@ export default function CoursePlanner({
                     <div className="flex items-center gap-2 pl-2">
                       <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{clue.category}</span>
                       <span className="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-mono">
-                        {clue.targetLocation.lat.toFixed(4)}° N, {clue.targetLocation.lng.toFixed(4)}° E
+                        {clue.targetLocation.lat.toFixed(4)}° S, {clue.targetLocation.lng.toFixed(4)}° E
                       </span>
                     </div>
                   </div>
@@ -337,7 +373,7 @@ export default function CoursePlanner({
             </button>
           </div>
 
-          {/* Bottom Data Bar overlaying map */}
+          {/* Dynamic Spatial Analysis Card Overlaying Map */}
           <div className="absolute bottom-6 left-6 right-6 lg:right-auto lg:w-96 bg-surface/90 backdrop-blur-md rounded-xl p-4 shadow-xl border border-border-subtle z-20">
             <div className="flex items-center justify-between mb-2">
               <span className="font-label-md text-label-md text-on-surface uppercase tracking-wider">Spatial Analysis</span>
@@ -345,18 +381,23 @@ export default function CoursePlanner({
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center text-body-sm">
+                <span className="text-text-secondary">Start Location</span>
+                <span className="font-mono text-on-surface text-xs font-bold truncate max-w-[200px]" title={startName}>{startName}</span>
+              </div>
+              <div className="flex justify-between items-center text-body-sm">
                 <span className="text-text-secondary">Total Distance</span>
-                <span className="font-mono text-on-surface">14.2 km</span>
+                <span className="font-mono text-on-surface font-bold">{courseMetrics.totalDistanceKm}</span>
               </div>
               <div className="flex justify-between items-center text-body-sm">
                 <span className="text-text-secondary">Est. Completion</span>
-                <span className="font-mono text-on-surface">3h 45m</span>
+                <span className="font-mono text-on-surface font-bold">{courseMetrics.estTime}</span>
               </div>
               <div className="w-full h-1.5 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-[65%]"></div>
+                <div className="h-full bg-primary rounded-full w-[100%]"></div>
               </div>
             </div>
           </div>
+
         </div>
 
       </div>
@@ -365,7 +406,7 @@ export default function CoursePlanner({
       {isAddingClue && (
         <div className="fixed inset-0 z-50 bg-surface/85 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-surface-container-lowest p-6 rounded-xl border border-primary max-w-lg w-full space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-on-surface">Add New Spatial Clue (Rathmines)</h3>
+            <h3 className="text-lg font-bold text-on-surface">Add New Spatial Clue</h3>
 
             <form onSubmit={handleCreateClue} className="space-y-3">
               <div>

@@ -6,9 +6,14 @@ export const PRESET_COURSES = [
     durationMinutes: 90,
     theme: "Historical & Spatial",
     startLocation: {
-      name: "Rathmines Park, NSW 2283",
-      lat: -33.0360,
-      lng: 151.5930
+      name: "Rathmines Jetty & Slipway, NSW 2283",
+      lat: -33.0372,
+      lng: 151.5945
+    },
+    finishLocation: {
+      name: "Style Point Catalina Moorings",
+      lat: -33.0395,
+      lng: 151.5960
     },
     clues: [
       {
@@ -16,7 +21,7 @@ export const PRESET_COURSES = [
         number: 1,
         title: "Catalina Slipway & Lake Macquarie Launch",
         category: "WW2 Heritage & Boating",
-        description: "Locate the historic RAAF concrete slipway where PBY Catalina flying boats were launched into Lake Macquarie during World War II.",
+        description: "Locate the historic RAAF concrete slipway where PBY Catalina flying boats launched into Lake Macquarie during WWII.",
         targetLocation: { lat: -33.0372, lng: 151.5945 },
         points: 500,
         targetRadiusMeters: 30,
@@ -59,6 +64,55 @@ export const PRESET_COURSES = [
     ]
   },
   {
+    id: "cairns-spatial",
+    title: "Cairns Coastal & Esplanade Challenge",
+    subtitle: "Spatial Olympics course covering Cairns Lagoon and Trinity Inlet",
+    durationMinutes: 60,
+    theme: "Eco & Environmental",
+    startLocation: {
+      name: "Cairns Hilton Wharf & Lagoon, QLD",
+      lat: -16.9230,
+      lng: 145.7810
+    },
+    finishLocation: {
+      name: "Marlin Marina Pier",
+      lat: -16.9200,
+      lng: 145.7775
+    },
+    clues: [
+      {
+        id: "cairns-1",
+        number: 1,
+        title: "Cairns Lagoon Woven Fish Sculptures",
+        category: "Public Art & GIS",
+        description: "Capture the stainless steel woven fish sculptures standing inside Cairns Lagoon pool.",
+        targetLocation: { lat: -16.9200, lng: 145.7775 },
+        points: 500,
+        targetRadiusMeters: 20,
+        taskType: "PHOTO_VALIDATION",
+        requiredAttributes: [
+          { key: "sculpture_visible", label: "Woven Fish Visible", type: "select", options: ["Yes", "No"] }
+        ],
+        aiCriteria: "Verify fish sculpture artwork in waterfront lagoon."
+      },
+      {
+        id: "cairns-2",
+        number: 2,
+        title: "Trinity Inlet Marine Benchmark",
+        category: "Maritime GIS",
+        description: "Record the tidal survey marker at the entrance to Marlin Marina near Cairns Hilton.",
+        targetLocation: { lat: -16.9230, lng: 145.7810 },
+        points: 750,
+        targetRadiusMeters: 25,
+        taskType: "POINT_CAPTURE",
+        requiredAttributes: [
+          { key: "tide_level", label: "Tide Level", type: "select", options: ["High", "Mid", "Low"] }
+        ],
+        aiCriteria: "Confirm tidal gauge or marina pier structure."
+      }
+    ]
+  },
+  {
     id: "kyoto-heritage",
     title: "Kyoto Heritage Sprint",
     subtitle: "Navigate ancient shrines and geodetic reference markers across Kyoto",
@@ -68,6 +122,11 @@ export const PRESET_COURSES = [
       name: "Kyoto Imperial Palace, Japan",
       lat: 35.0254,
       lng: 135.7621
+    },
+    finishLocation: {
+      name: "Nijo Castle Gate",
+      lat: 35.0142,
+      lng: 135.7482
     },
     clues: [
       {
@@ -99,68 +158,9 @@ export const PRESET_COURSES = [
           { key: "floor_type", label: "Floor Surface", type: "select", options: ["Timber", "Stone", "Matting"] }
         ],
         aiCriteria: "Detect chirp acoustic signature characteristic of nightingale floor."
-      },
-      {
-        id: "clue-3",
-        number: 3,
-        title: "Geodetic Survey Reference Mark",
-        category: "Geospatial",
-        description: "Locate the primary triangulated benchmark plaque on Mount Hiei slope.",
-        targetLocation: { lat: 35.0658, lng: 135.8342 },
-        points: 1000,
-        targetRadiusMeters: 15,
-        taskType: "POINT_CAPTURE",
-        requiredAttributes: [
-          { key: "benchmark_id", label: "Benchmark ID", type: "text" }
-        ],
-        aiCriteria: "Verify brass benchmark disk image with clear engraved text."
-      }
-    ]
-  },
-  {
-    id: "cairns-spatial",
-    title: "Cairns Coastal & Esplanade Challenge",
-    subtitle: "Spatial Olympics course covering Cairns Lagoon and Trinity Inlet",
-    durationMinutes: 60,
-    theme: "Eco & Environmental",
-    startLocation: {
-      name: "Cairns Esplanade Lagoon, QLD",
-      lat: -16.9203,
-      lng: 145.7770
-    },
-    clues: [
-      {
-        id: "cairns-1",
-        number: 1,
-        title: "Cairns Lagoon Woven Fish Sculptures",
-        category: "Public Art & GIS",
-        description: "Capture the stainless steel woven fish sculptures standing inside Cairns Lagoon pool.",
-        targetLocation: { lat: -16.9200, lng: 145.7775 },
-        points: 500,
-        targetRadiusMeters: 20,
-        taskType: "PHOTO_VALIDATION",
-        requiredAttributes: [
-          { key: "sculpture_visible", label: "Woven Fish Visible", type: "select", options: ["Yes", "No"] }
-        ],
-        aiCriteria: "Verify fish sculpture artwork in waterfront lagoon."
-      },
-      {
-        id: "cairns-2",
-        number: 2,
-        title: "Trinity Inlet Marine Benchmark",
-        category: "Maritime GIS",
-        description: "Record the tidal survey marker at the entrance to Marlin Marina.",
-        targetLocation: { lat: -16.9230, lng: 145.7810 },
-        points: 750,
-        targetRadiusMeters: 25,
-        taskType: "POINT_CAPTURE",
-        requiredAttributes: [
-          { key: "tide_level", label: "Tide Level", type: "select", options: ["High", "Mid", "Low"] }
-        ],
-        aiCriteria: "Confirm tidal gauge or marina pier structure."
       }
     ]
   }
 ];
 
-export const INITIAL_COURSE = PRESET_COURSES[0]; // Default to Rathmines WW2 & Boating Trail!
+export const INITIAL_COURSE = PRESET_COURSES[0];
