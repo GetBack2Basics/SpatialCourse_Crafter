@@ -1,142 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/common/Header';
-import TerminalLogs from './components/common/TerminalLogs';
 import CoursePlanner from './components/admin/CoursePlanner';
 import ClueRunner from './components/player/ClueRunner';
 import Leaderboard from './components/scoring/Leaderboard';
+import TerminalLogs from './components/common/TerminalLogs';
 
-import { DEFAULT_COURSE, INITIAL_TEAMS } from './data/initialCourse';
+import { PRESET_COURSES } from './data/initialCourse';
 import { wsService } from './services/websocketService';
-import { queueService } from './services/queueService';
-import { teamMergeService } from './services/teamMergeService';
 
 export default function App() {
-  // Set DEFAULT activeTab to 'ADMIN' so the user immediately sees the Stitch Admin Planner!
-  const [activeTab, setActiveTab] = useState('ADMIN'); // 'ADMIN' | 'PLAYER' | 'SCORING'
-  const [course, setCourse] = useState(DEFAULT_COURSE);
-  const [teams, setTeams] = useState(INITIAL_TEAMS);
-  const [activeTeam, setActiveTeam] = useState(INITIAL_TEAMS[0]);
+  const [activeTab, setActiveTab] = useState('ADMIN');
   
-  // WebSocket logs state
+  // List of all courses available
+  const [courses, setCourses] = useState(PRESET_COURSES);
+  const [selectedCourseId, setSelectedCourseId] = useState(PRESET_COURSES[0].id);
+
+  // Active course derived from selected ID
+  const activeCourse = courses.find(c => c.id === selectedCourseId) || courses[0];
+
+  // Logs overlay state
+  const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [isLogsOpen, setIsLogsOpen] = useState(false);
 
-  // Submissions state
-  const [submissions, setSubmissions] = useState([
-    {
-      id: 'sub-sample-1',
-      clueId: 'clue-1',
-      clueNumber: 1,
-      clueTitle: 'Geodetic Survey Reference Mark #402',
-      teamId: 'team-1',
-      teamName: 'Team Mango Mapping',
-      submittedBy: 'Sarah',
-      capturedLocation: { lat: -16.91858, lng: 145.77812, accuracy: 2.1 },
-      spatialOffsetMeters: 3.2,
-      isWithinRadius: true,
-      status: 'VERIFIED_BY_AI',
-      photoUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400',
-      attributes: { pin_condition: 'Good', stamped_id: 'PM-402-FNQ' },
-      aiMetrics: { spatialAccuracyScore: 98, photoConfidence: 94, attributeScore: 100, overallAiRating: 97 }
-    },
-    {
-      id: 'sub-sample-2',
-      clueId: 'clue-2',
-      clueNumber: 2,
-      clueTitle: 'Historical Maritime Pioneer Monument',
-      teamId: 'team-2',
-      teamName: 'Team GeoWizards',
-      submittedBy: 'Marcus',
-      capturedLocation: { lat: -16.92024, lng: 145.77945, accuracy: 3.5 },
-      spatialOffsetMeters: 4.5,
-      isWithinRadius: true,
-      status: 'VERIFIED_BY_AI',
-      photoUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400',
-      attributes: { inscription_year: '1895', material_type: 'Sandstone' },
-      aiMetrics: { spatialAccuracyScore: 92, photoConfidence: 90, attributeScore: 95, overallAiRating: 92 }
-    }
-  ]);
+  // Active player team
+  const [activeTeam] = useState({ id: 'team-mango', name: 'Team Mango (NSW)' });
 
-  // Subscribe to WebSocket logs
   useEffect(() => {
-    const unsubscribe = wsService.subscribe(newLogs => {
-      setLogs(newLogs);
+    // Connect to WebSocket server on mount
+    wsService.connect('ws://localhost:8080/ws');
+
+    const unsubscribe = wsService.subscribe((log) => {
+      setLogs((prev) => [log, ...prev].slice(0, 100));
     });
-    return unsubscribe;
+
+    return () => {
+      unsubscribe();
+      wsService.disconnect();
+    };
   }, []);
 
-  // Subscribe to Team Merged Submissions
-  useEffect(() => {
-    const unsubscribe = teamMergeService.subscribe(mergedSubs => {
-      if (mergedSubs.length > 0) {
-        setSubmissions(prev => {
-          const map = new Map();
-          [...prev, ...mergedSubs].forEach(item => map.set(item.id, item));
-          return Array.from(map.values());
-        });
-      }
-    });
-    return unsubscribe;
-  }, []);
+  const handleUpdateCourse = (updatedCourse) => {
+    setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
+  };
 
-  // Handle mobile player submission
-  const handleSubmitData = (submissionPayload, targetClue) => {
-    queueService.enqueueSubmission(submissionPayload, targetClue);
-    setIsLogsOpen(true);
+  const handleCreateNewCourse = () => {
+    const newId = `course-${Date.now()}`;
+    const newCourse = {
+      id: newId,
+      title: "New Custom Spatial Challenge",
+      subtitle: "Custom spatial olympics course created in Rathmines / Lake Macquarie",
+      durationMinutes: 60,
+      theme: "Historical & Spatial",
+      startLocation: {
+        name: "Rathmines Park, NSW 2283",
+        lat: -33.0360,
+        lng: 151.5930
+      },
+      clues: [
+        {
+          id: `clue-${Date.now()}-1`,
+          number: 1,
+          title: "Starting Waypoint",
+          category: "Geospatial",
+          description: "Initial waypoint for the spatial challenge.",
+          targetLocation: { lat: -33.0360, lng: 151.5930 },
+          points: 500,
+          targetRadiusMeters: 25,
+          taskType: "POINT_CAPTURE",
+          requiredAttributes: [
+            { key: "status", label: "Status", type: "select", options: ["Good", "Needs Inspection"] }
+          ],
+          aiCriteria: "Verify location photo at target coordinates."
+        }
+      ]
+    };
+
+    setCourses(prev => [newCourse, ...prev]);
+    setSelectedCourseId(newId);
+    wsService.emitLog('SYSTEM', `Created new course draft: "${newCourse.title}"`);
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface flex flex-col font-sans selection:bg-primary selection:text-on-primary">
-      
-      {/* Global Navigation Header matching Stitch admin_text.html */}
+    <div className="min-h-screen bg-background text-on-surface font-body-md relative overflow-x-hidden">
+      {/* Header Bar */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         logCount={logs.length}
-        toggleLogs={() => setIsLogsOpen(!isLogsOpen)}
+        toggleLogs={() => setShowLogs(!showLogs)}
         activeTeam={activeTeam}
       />
 
-      {/* Main Content Area starting below fixed header */}
-      <main className="w-full pt-16 bg-background min-h-screen">
+      {/* Main Tab Content */}
+      <main className="w-full pt-16 min-h-[calc(100vh-4rem)]">
         {activeTab === 'ADMIN' && (
           <CoursePlanner
-            course={course}
-            onUpdateCourse={setCourse}
+            course={activeCourse}
+            courses={courses}
+            selectedCourseId={selectedCourseId}
+            onSelectCourse={setSelectedCourseId}
+            onCreateNewCourse={handleCreateNewCourse}
+            onUpdateCourse={handleUpdateCourse}
           />
         )}
 
         {activeTab === 'PLAYER' && (
-          <div className="max-w-[1440px] mx-auto p-margin-mobile lg:p-margin-desktop">
-            <ClueRunner
-              course={course}
-              activeTeam={activeTeam}
-              submissions={submissions}
-              onSubmitData={handleSubmitData}
-            />
-          </div>
+          <ClueRunner
+            course={activeCourse}
+            activeTeam={activeTeam}
+          />
         )}
 
         {activeTab === 'SCORING' && (
-          <div className="max-w-[1440px] mx-auto p-margin-mobile lg:p-margin-desktop">
-            <Leaderboard
-              teams={teams}
-              submissions={submissions}
-              courseClues={course.clues}
-              onSubmissionsValidated={(validatedList) => setSubmissions(validatedList)}
-            />
-          </div>
+          <Leaderboard
+            course={activeCourse}
+            activeTeam={activeTeam}
+          />
         )}
       </main>
 
-      {/* Slide-Up WebSocket Iteration Console */}
-      <TerminalLogs
-        isOpen={isLogsOpen}
-        onClose={() => setIsLogsOpen(false)}
-        logs={logs}
-        onClear={() => wsService.clear()}
-      />
-
+      {/* WebSocket Logs Terminal Drawer */}
+      {showLogs && (
+        <TerminalLogs
+          logs={logs}
+          onClose={() => setShowLogs(false)}
+        />
+      )}
     </div>
   );
 }

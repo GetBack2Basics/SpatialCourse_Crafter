@@ -1,89 +1,166 @@
-// Initial Course & Clues Data for FUNGIS GeoScore AI (Spatial Olympics)
-
-export const DEFAULT_COURSE = {
-  id: "fungis-cairns-2026",
-  title: "Cairns Spatial Olympics 2km Challenge",
-  description: "Far North GIS User Group flagship 2km spatial data collection course combining geodetic precision, historical monuments, and environmental monitoring.",
-  theme: "Historical & Spatial Surveying",
-  durationMinutes: 90,
-  startLocation: {
-    lat: -16.9186,
-    lng: 145.7781,
-    name: "Cairns Esplanade Lagoon Plaza"
+export const PRESET_COURSES = [
+  {
+    id: "rathmines-ww2-boating",
+    title: "Rathmines WW2 Catalina & Boating Trail",
+    subtitle: "Explore the historic WWII RAAF Catalina Flying Boat Base on Lake Macquarie",
+    durationMinutes: 90,
+    theme: "Historical & Spatial",
+    startLocation: {
+      name: "Rathmines Park, NSW 2283",
+      lat: -33.0360,
+      lng: 151.5930
+    },
+    clues: [
+      {
+        id: "clue-rathmines-1",
+        number: 1,
+        title: "Catalina Slipway & Lake Macquarie Launch",
+        category: "WW2 Heritage & Boating",
+        description: "Locate the historic RAAF concrete slipway where PBY Catalina flying boats were launched into Lake Macquarie during World War II.",
+        targetLocation: { lat: -33.0372, lng: 151.5945 },
+        points: 500,
+        targetRadiusMeters: 30,
+        taskType: "PHOTO_VALIDATION",
+        requiredAttributes: [
+          { key: "slipway_condition", label: "Slipway Condition", type: "select", options: ["Good", "Fair", "Submerged"] }
+        ],
+        aiCriteria: "Verify photo shows the historic concrete slipway or Lake Macquarie waterline at Rathmines."
+      },
+      {
+        id: "clue-rathmines-2",
+        number: 2,
+        title: "RAAF Heritage Officers' Mess Precinct",
+        category: "Historical GIS",
+        description: "Find the survey marker near the historic WWII RAAF Officers' Mess precinct overlooking Lake Macquarie.",
+        targetLocation: { lat: -33.0348, lng: 151.5912 },
+        points: 750,
+        targetRadiusMeters: 25,
+        taskType: "POINT_CAPTURE",
+        requiredAttributes: [
+          { key: "structure_type", label: "Heritage Structure", type: "select", options: ["Plaque", "Foundation", "Memorial Tree"] }
+        ],
+        aiCriteria: "Confirm presence of WWII heritage plaque or historical park landmark."
+      },
+      {
+        id: "clue-rathmines-3",
+        number: 3,
+        title: "Style Point Catalina Moorings",
+        category: "Maritime & Boating",
+        description: "Capture a geotagged photo of the Catalina mooring zone and boat moorings at Style Point, Lake Macquarie.",
+        targetLocation: { lat: -33.0395, lng: 151.5960 },
+        points: 1000,
+        targetRadiusMeters: 35,
+        taskType: "PHOTO_VALIDATION",
+        requiredAttributes: [
+          { key: "mooring_count", label: "Visible Boats/Moorings", type: "select", options: ["1-5", "5-10", "10+"] }
+        ],
+        aiCriteria: "Verify photo depicts Lake Macquarie waters, boats, or mooring buoys."
+      }
+    ]
   },
-  geofenceRadiusMeters: 25,
-  clues: [
-    {
-      id: "clue-1",
-      number: 1,
-      title: "Geodetic Survey Reference Mark #402",
-      category: "Geodetic / Spatial",
-      description: "Locate the stainless steel geodetic benchmark pin embedded in the seawall promenade. Record high-accuracy GPS coordinates.",
-      targetLocation: { lat: -16.9186, lng: 145.7781 },
-      points: 150,
-      targetRadiusMeters: 20,
-      taskType: "POINT_CAPTURE", // Precise GPS point + attributes
-      requiredAttributes: [
-        { key: "pin_condition", label: "Marker Condition", type: "select", options: ["Good", "Disturbed", "Covered", "Damaged"] },
-        { key: "stamped_id", label: "Stamped ID Number", type: "text", placeholder: "e.g. PM-402-FNQ" }
-      ],
-      aiCriteria: "Verify photo shows a circular metal benchmark pin or brass survey disc in concrete."
+  {
+    id: "kyoto-heritage",
+    title: "Kyoto Heritage Sprint",
+    subtitle: "Navigate ancient shrines and geodetic reference markers across Kyoto",
+    durationMinutes: 120,
+    theme: "Cultural Heritage",
+    startLocation: {
+      name: "Kyoto Imperial Palace, Japan",
+      lat: 35.0254,
+      lng: 135.7621
     },
-    {
-      id: "clue-2",
-      number: 2,
-      title: "Historical Maritime Pioneer Monument",
-      category: "Historical & Cultural",
-      description: "Find the 1890s sandstone monument honoring early maritime cartographers. Capture a geotagged photo of the plaque text.",
-      targetLocation: { lat: -16.9202, lng: 145.7794 },
-      points: 200,
-      targetRadiusMeters: 25,
-      taskType: "GEOTAG_PHOTO",
-      requiredAttributes: [
-        { key: "inscription_year", label: "Plaque Inscription Year", type: "text", placeholder: "e.g. 1895" },
-        { key: "material_type", label: "Structure Material", type: "select", options: ["Sandstone", "Granite", "Bronze", "Timber"] }
-      ],
-      aiCriteria: "Photo must display an engraved commemorative stone plaque with readable lettering."
+    clues: [
+      {
+        id: "clue-1",
+        number: 1,
+        title: "Kinkaku-ji Reflection Point",
+        category: "Visual AI",
+        description: "Identify the precise coordinates where the Golden Pavilion mirrors on the Kyōko-chi pond surface.",
+        targetLocation: { lat: 35.0394, lng: 135.7292 },
+        points: 500,
+        targetRadiusMeters: 25,
+        taskType: "PHOTO_VALIDATION",
+        requiredAttributes: [
+          { key: "reflection_visible", label: "Water Reflection", type: "select", options: ["Yes", "No", "Partial"] }
+        ],
+        aiCriteria: "Verify photo shows golden structure reflection on water surface."
+      },
+      {
+        id: "clue-2",
+        number: 2,
+        title: "Nijo Castle Nightingale Floor",
+        category: "Audio AI",
+        description: "Record acoustic telemetry of the uguisubari floor boards near Ninomaru Palace entrance.",
+        targetLocation: { lat: 35.0142, lng: 135.7482 },
+        points: 750,
+        targetRadiusMeters: 20,
+        taskType: "AUDIO_VALIDATION",
+        requiredAttributes: [
+          { key: "floor_type", label: "Floor Surface", type: "select", options: ["Timber", "Stone", "Matting"] }
+        ],
+        aiCriteria: "Detect chirp acoustic signature characteristic of nightingale floor."
+      },
+      {
+        id: "clue-3",
+        number: 3,
+        title: "Geodetic Survey Reference Mark",
+        category: "Geospatial",
+        description: "Locate the primary triangulated benchmark plaque on Mount Hiei slope.",
+        targetLocation: { lat: 35.0658, lng: 135.8342 },
+        points: 1000,
+        targetRadiusMeters: 15,
+        taskType: "POINT_CAPTURE",
+        requiredAttributes: [
+          { key: "benchmark_id", label: "Benchmark ID", type: "text" }
+        ],
+        aiCriteria: "Verify brass benchmark disk image with clear engraved text."
+      }
+    ]
+  },
+  {
+    id: "cairns-spatial",
+    title: "Cairns Coastal & Esplanade Challenge",
+    subtitle: "Spatial Olympics course covering Cairns Lagoon and Trinity Inlet",
+    durationMinutes: 60,
+    theme: "Eco & Environmental",
+    startLocation: {
+      name: "Cairns Esplanade Lagoon, QLD",
+      lat: -16.9203,
+      lng: 145.7770
     },
-    {
-      id: "clue-3",
-      number: 3,
-      title: "Mangrove Boardwalk Eco-Monitoring Node",
-      category: "Environmental GIS",
-      description: "Navigate along the wetland boardwalk to the solar-powered water level telemetry sensor.",
-      targetLocation: { lat: -16.9221, lng: 145.7810 },
-      points: 175,
-      targetRadiusMeters: 30,
-      taskType: "QUIZ_AND_FORM",
-      quizQuestion: "What is the recorded digital sensor telemetry frequency listed on the node box?",
-      quizOptions: ["5 minutes", "15 minutes", "1 hour", "Continuous"],
-      correctOption: 1, // 15 minutes
-      requiredAttributes: [
-        { key: "sensor_status", label: "Status Indicator Light", type: "select", options: ["Green / Active", "Amber / Maint", "Red / Fault", "Off"] }
-      ],
-      aiCriteria: "Photo should show the solar panel assembly and telemetry cabinet next to mangrove boardwalk."
-    },
-    {
-      id: "clue-4",
-      number: 4,
-      title: "Trinity Bay Datum Zero Tidal Pillar",
-      category: "Hydrographic Survey",
-      description: "Locate the tidal gauge pillar at the marina pier head. Capture precise coordinates and elevation estimate.",
-      targetLocation: { lat: -16.9240, lng: 145.7828 },
-      points: 225,
-      targetRadiusMeters: 20,
-      taskType: "POINT_CAPTURE",
-      requiredAttributes: [
-        { key: "water_level_m", label: "Tide Gauge Height (Meters)", type: "number", placeholder: "e.g. 1.85" },
-        { key: "structure_notes", label: "Structural Inspection Notes", type: "text", placeholder: "Any biofouling or damage?" }
-      ],
-      aiCriteria: "Photo must show tidal height scale markings or tide gauge housing against the water pier."
-    }
-  ]
-};
-
-export const INITIAL_TEAMS = [
-  { id: "team-1", name: "Team Mango Mapping", pin: "1010", color: "#38bdf8", members: ["Sarah (Capt)", "Dave", "Alex"] },
-  { id: "team-2", name: "Team GeoWizards", pin: "2020", color: "#a855f7", members: ["Marcus", "Elena"] },
-  { id: "team-3", name: "Team Tropics GIS", pin: "3030", color: "#22c55e", members: ["Priya", "Tom", "Jess"] }
+    clues: [
+      {
+        id: "cairns-1",
+        number: 1,
+        title: "Cairns Lagoon Woven Fish Sculptures",
+        category: "Public Art & GIS",
+        description: "Capture the stainless steel woven fish sculptures standing inside Cairns Lagoon pool.",
+        targetLocation: { lat: -16.9200, lng: 145.7775 },
+        points: 500,
+        targetRadiusMeters: 20,
+        taskType: "PHOTO_VALIDATION",
+        requiredAttributes: [
+          { key: "sculpture_visible", label: "Woven Fish Visible", type: "select", options: ["Yes", "No"] }
+        ],
+        aiCriteria: "Verify fish sculpture artwork in waterfront lagoon."
+      },
+      {
+        id: "cairns-2",
+        number: 2,
+        title: "Trinity Inlet Marine Benchmark",
+        category: "Maritime GIS",
+        description: "Record the tidal survey marker at the entrance to Marlin Marina.",
+        targetLocation: { lat: -16.9230, lng: 145.7810 },
+        points: 750,
+        targetRadiusMeters: 25,
+        taskType: "POINT_CAPTURE",
+        requiredAttributes: [
+          { key: "tide_level", label: "Tide Level", type: "select", options: ["High", "Mid", "Low"] }
+        ],
+        aiCriteria: "Confirm tidal gauge or marina pier structure."
+      }
+    ]
+  }
 ];
+
+export const INITIAL_COURSE = PRESET_COURSES[0]; // Default to Rathmines WW2 & Boating Trail!

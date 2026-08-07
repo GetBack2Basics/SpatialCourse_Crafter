@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MapLibreView from '../map/MapLibreView';
 import { wsService } from '../../services/websocketService';
 
-export default function CoursePlanner({ course, onUpdateCourse }) {
-  const [title, setTitle] = useState(course.title || "Kyoto Heritage Sprint");
-  const [duration, setDuration] = useState(course.durationMinutes || 120);
-  const [theme, setTheme] = useState(course.theme || 'Cultural Heritage');
-  const [startName, setStartName] = useState(course.startLocation.name || "Kyoto Imperial Palace");
+export default function CoursePlanner({
+  course,
+  courses,
+  selectedCourseId,
+  onSelectCourse,
+  onCreateNewCourse,
+  onUpdateCourse
+}) {
+  const [title, setTitle] = useState(course.title);
+  const [duration, setDuration] = useState(course.durationMinutes);
+  const [theme, setTheme] = useState(course.theme);
+  const [startName, setStartName] = useState(course.startLocation.name);
+
+  // Sync state whenever selected course changes
+  useEffect(() => {
+    setTitle(course.title);
+    setDuration(course.durationMinutes);
+    setTheme(course.theme);
+    setStartName(course.startLocation.name);
+  }, [course]);
 
   // Notification Toast State
   const [toastMessage, setToastMessage] = useState(null);
@@ -14,9 +29,9 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
   // New clue modal state
   const [isAddingClue, setIsAddingClue] = useState(false);
   const [newClueTitle, setNewClueTitle] = useState('');
-  const [newClueCategory, setNewClueCategory] = useState('Visual AI');
+  const [newClueCategory, setNewClueCategory] = useState('WW2 Heritage & Boating');
   const [newClueDesc, setNewClueDesc] = useState('');
-  const [newClueLat, setNewClueLat] = useState(course.startLocation.lat - 0.0015);
+  const [newClueLat, setNewClueLat] = useState(course.startLocation.lat - 0.0012);
   const [newClueLng, setNewClueLng] = useState(course.startLocation.lng + 0.0015);
 
   const showToast = (msg, type = 'success') => {
@@ -38,7 +53,6 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
 
     onUpdateCourse(updatedCourse);
 
-    // Save to backend REST API
     try {
       await fetch('http://localhost:8080/api/course', {
         method: 'POST',
@@ -50,17 +64,17 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
     }
 
     wsService.emitLog('SYSTEM', `Course Published: "${title}" (${duration} mins, Theme: ${theme})`);
-    showToast(`✅ Course "${title}" successfully saved & published to GCP backend!`);
+    showToast(`✅ Course "${title}" successfully saved & published!`);
   };
 
   const handleDiscardDraft = () => {
-    setTitle(course.title || "Kyoto Heritage Sprint");
-    setDuration(course.durationMinutes || 120);
-    setTheme(course.theme || 'Cultural Heritage');
-    setStartName(course.startLocation.name || "Kyoto Imperial Palace");
+    setTitle(course.title);
+    setDuration(course.durationMinutes);
+    setTheme(course.theme);
+    setStartName(course.startLocation.name);
 
     wsService.emitLog('SYSTEM', `Draft discarded for course "${course.title}". Reset to last saved state.`);
-    showToast(`🔄 Draft discarded. Course parameters reset to last saved state.`, 'info');
+    showToast(`🔄 Draft discarded. Reset to last saved state.`, 'info');
   };
 
   const handleCreateClue = (e) => {
@@ -72,15 +86,15 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
       number: course.clues.length + 1,
       title: newClueTitle,
       category: newClueCategory,
-      description: newClueDesc || 'Custom clue added via Stitch Admin Planning Mode',
+      description: newClueDesc || 'Custom waypoint added in Rathmines NSW',
       targetLocation: { lat: parseFloat(newClueLat), lng: parseFloat(newClueLng) },
       points: 500,
       targetRadiusMeters: 25,
-      taskType: 'POINT_CAPTURE',
+      taskType: 'PHOTO_VALIDATION',
       requiredAttributes: [
-        { key: 'site_condition', label: 'Site Condition', type: 'select', options: ['Good', 'Fair', 'Requires Maint'] }
+        { key: 'site_condition', label: 'Condition', type: 'select', options: ['Good', 'Fair', 'Requires Maint'] }
       ],
-      aiCriteria: 'Verify photo matches the feature criteria at the designated lat/lng.'
+      aiCriteria: 'Verify photo matches waypoint feature at target location.'
     };
 
     const updatedClues = [...course.clues, newClue];
@@ -111,27 +125,57 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
         </div>
       )}
 
-      {/* Top actions bar from Stitch code.html */}
+      {/* Top actions bar with Course Selector & New Course controls */}
       <div className="w-full bg-surface-container-lowest shadow-sm z-10 px-margin-mobile lg:px-margin-desktop py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-subtle">
+        
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Spatial Olympics Course Wizard</h1>
           <p className="font-body-md text-body-md text-text-secondary mt-1">Design and configure geo-spatial challenges.</p>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Course Selector & New Course Buttons */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-surface-container rounded-full px-3 py-1.5 border border-border-subtle shadow-sm">
+            <span className="material-symbols-outlined text-primary text-sm">map</span>
+            <select
+              value={selectedCourseId}
+              onChange={e => onSelectCourse(e.target.value)}
+              className="bg-transparent text-xs font-bold text-on-surface focus:outline-none cursor-pointer"
+            >
+              {courses.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={onCreateNewCourse}
+            className="h-9 px-4 rounded-full font-label-md text-xs bg-secondary-container text-on-secondary-container hover:bg-secondary/20 transition-all font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">add_circle</span>
+            New Course
+          </button>
+
+          <div className="w-px h-6 bg-border-subtle hidden sm:block mx-1"></div>
+
           <button
             onClick={handleDiscardDraft}
-            className="h-10 px-6 rounded-full font-label-md text-label-md bg-surface text-primary border border-primary transition-all hover:bg-primary-container hover:text-on-primary-container uppercase tracking-wide cursor-pointer"
+            className="h-9 px-4 rounded-full font-label-md text-xs bg-surface text-primary border border-primary transition-all hover:bg-primary-container hover:text-on-primary-container uppercase tracking-wide cursor-pointer"
           >
-            Discard Draft
+            Discard
           </button>
+          
           <button
             onClick={handleSaveCourse}
-            className="h-10 px-6 rounded-full font-label-md text-label-md bg-primary text-on-primary shadow-md transition-all hover:bg-surface-tint hover:shadow-lg uppercase tracking-wide flex items-center gap-2 cursor-pointer"
+            className="h-9 px-5 rounded-full font-label-md text-xs bg-primary text-on-primary shadow-md transition-all hover:bg-surface-tint hover:shadow-lg uppercase tracking-wide flex items-center gap-1.5 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">save</span>
+            <span className="material-symbols-outlined text-sm">save</span>
             Save Course
           </button>
         </div>
+
       </div>
 
       {/* Main Content Area: Split Layout from Stitch code.html */}
@@ -321,7 +365,7 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
       {isAddingClue && (
         <div className="fixed inset-0 z-50 bg-surface/85 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-surface-container-lowest p-6 rounded-xl border border-primary max-w-lg w-full space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-on-surface">Add New Spatial Clue</h3>
+            <h3 className="text-lg font-bold text-on-surface">Add New Spatial Clue (Rathmines)</h3>
 
             <form onSubmit={handleCreateClue} className="space-y-3">
               <div>
@@ -329,7 +373,7 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Historic Flagpole Landmark"
+                  placeholder="e.g. Catalina Hangar Foundation"
                   value={newClueTitle}
                   onChange={e => setNewClueTitle(e.target.value)}
                   className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-sm text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
@@ -343,10 +387,10 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
                   onChange={e => setNewClueCategory(e.target.value)}
                   className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
                 >
+                  <option value="WW2 Heritage & Boating">WW2 Heritage & Boating</option>
+                  <option value="Maritime & Boating">Maritime & Boating</option>
+                  <option value="Historical GIS">Historical GIS</option>
                   <option value="Visual AI">Visual AI</option>
-                  <option value="Audio AI">Audio AI</option>
-                  <option value="Geospatial">Geospatial</option>
-                  <option value="Environmental GIS">Environmental GIS</option>
                 </select>
               </div>
 
@@ -388,7 +432,7 @@ export default function CoursePlanner({ course, onUpdateCourse }) {
                 <button
                   type="button"
                   onClick={() => setIsAddingClue(false)}
-                  className="px-4 py-2 rounded-full border border-border-subtle text-xs font-semibold text-on-surface-variant"
+                  className="px-4 py-2 rounded-full border border-border-subtle text-xs font-semibold text-on-surface-variant cursor-pointer"
                 >
                   Cancel
                 </button>

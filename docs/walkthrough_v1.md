@@ -1,24 +1,39 @@
-# FUNGIS GeoScore AI Implementation Walkthrough - 1:1 Stitch Interface Direct Integration
+# SpatialCourse_Crafter Implementation Walkthrough
 
-We updated **FUNGIS GeoScore AI** to directly embed the exact **Tailwind CDN configuration and inline theme extension script from `admin.zip` (`code.html`)** into `index.html`:
+**SpatialCourse_Crafter** is an open-source, mobile-friendly spatial game & course creation platform built for the **Far North GIS User Group's Spatial Olympics**. Powered by **Stitch 1:1 Fungis Geospatial Intelligence design system**, **GeoLibre (MapLibre GL JS)** open-source mapping engine, real Node.js WebSocket backend, and GCP Gemini 1.5 Flash AI validation engine.
 
 ---
 
-## 1. What Was Changed
+## 1. Key Accomplishments
 
-1. **Direct Tailwind CDN Engine**:
-   - Embedded the exact `tailwind.config` script tag from `code.html` directly into `index.html`.
-   - This ensures every single custom Stitch class (`font-headline-lg`, `text-headline-lg`, `px-margin-desktop`, `gap-gutter`, `bg-surface-container-lowest`, `text-on-surface`, `bg-primary`, `bg-primary-container`, `text-on-primary-container`, `border-border-subtle`, `text-text-secondary`, `bg-secondary-container`) is compiled dynamically by the Tailwind CDN engine.
+1. **Stitch 1:1 Design System & Interface**:
+   - Integrated the exact Stitch design blueprint from `design_blueprints/admin.zip`.
+   - Uses **Montserrat** typography, **Material Symbols Outlined** icon font, and Stitch color palette (`#0b1000`, `#f7f9ff`, `#2f4f18` / `#a1fd63`, `#486800` / `#d2ef6a`, `#6c3459` / `#fdff9d`).
 
-2. **1:1 HTML Markup**:
-   - Updated `src/components/common/Header.jsx` and `src/components/admin/CoursePlanner.jsx` to render the exact 1:1 HTML structure from `code.html`.
+2. **Admin Course Planning Studio**:
+   - Interactive wizard allowing course planners to set **Start Location**, **Target Duration**, **Location Theme** (*Historical & Spatial*, *Cultural Heritage*, *Eco & Environmental*, *Geodetic Precision*), and create spatial clue waypoints.
+   - Interactive **Discard Draft** and **Save Course** buttons wired to REST API endpoints, real WebSocket logs, and user toast notifications.
 
-3. **MapLibre GL Integration**:
-   - Replaced static map placeholder images with live **MapLibre GL JS engine** with interactive marker pins, popups, and floating map controls (`add`, `remove`, `my_location`, `layers`).
+3. **Mobile Player Experience & Real GPS**:
+   - Native HTML5 Geolocation API (`navigator.geolocation.watchPosition`) tracking real device GPS coordinates, heading, and accuracy radius.
+   - Target compass bearing meter and geofence unlock zone.
+   - Geotagged photo capture with real binary EXIF metadata parsing (`exifr`).
+
+4. **Real Node.js Server & WebSocket Network Broadcaster**:
+   - `server/index.js` running Express API server and WebSocket server (`ws`) on port `8080`.
+   - Real-time iteration log feed (`QUEUE` -> `EXIF` -> `SPATIAL` -> `TEAM_MERGE` -> `GCP AI`).
+
+5. **GCP Gemini 1.5 Flash AI Validation & Day 2 Rule Leaderboard**:
+   - Real `@google/generative-ai` SDK integration performing vision object detection and spatial QA.
+   - Day 2 participant rule voting sliders and transparent AI score breakdown tooltips.
+
+6. **GitHub Push**:
+   - Pushed directly to remote repository: [https://github.com/GetBack2Basics/SpatialCourse_Crafter](https://github.com/GetBack2Basics/SpatialCourse_Crafter)
 
 ---
 
 ## 2. Server & Client Status
 
-- **Real Node.js Server**: Running on `http://localhost:8080` (WebSocket endpoint: `ws://localhost:8080/ws`)
-- **Frontend App**: Running on **http://localhost:3000**
+- **GitHub Repository**: [https://github.com/GetBack2Basics/SpatialCourse_Crafter](https://github.com/GetBack2Basics/SpatialCourse_Crafter)
+- **Node.js Backend**: `http://localhost:8080` (WebSocket: `ws://localhost:8080/ws`)
+- **Frontend App**: **http://localhost:3000**
