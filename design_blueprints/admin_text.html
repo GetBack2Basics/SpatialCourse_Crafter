@@ -1,0 +1,230 @@
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={theme:{extend:{"colors":{"primary-fixed":"#c6efa6","on-tertiary-container":"#ffcbe8","secondary-fixed-dim":"#aad55d","on-error":"#ffffff","outline":"#73796c","primary-fixed-dim":"#abd28c","tertiary-fixed":"#ffd8ec","surface-muted":"#F8F9FA","surface":"#f7f9ff","tertiary-fixed-dim":"#fab0dd","on-tertiary-fixed":"#37062b","surface-dim":"#d7dadf","on-error-container":"#93000a","on-primary-fixed-variant":"#2f4f18","primary":"#2f4f18","on-secondary-fixed-variant":"#354e00","text-secondary":"#828487","error":"#ba1a1a","on-primary-fixed":"#0a2000","surface-bright":"#f7f9ff","on-secondary-container":"#4b6c00","on-surface":"#181c20","on-tertiary-fixed-variant":"#6b3359","border-subtle":"#DEE2E6","surface-tint":"#45672d","inverse-primary":"#abd28c","on-background":"#181c20","on-tertiary":"#ffffff","tertiary-container":"#874b72","inverse-on-surface":"#eef1f6","on-primary-container":"#bde59e","outline-variant":"#c3c8ba","secondary-container":"#c2ef73","inverse-surface":"#2d3135","tertiary":"#6c3459","primary-container":"#46682e","on-secondary":"#ffffff","surface-container-low":"#f1f4f9","on-primary":"#ffffff","on-surface-variant":"#43483d","surface-variant":"#e0e3e8","secondary":"#486800","surface-container":"#ebeef3","secondary-fixed":"#c5f175","surface-container-high":"#e5e8ee","background":"#f7f9ff","error-container":"#ffdad6","surface-container-highest":"#e0e3e8","on-secondary-fixed":"#131f00","surface-container-lowest":"#ffffff"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"gutter":"24px","base":"4px","margin-desktop":"48px","margin-mobile":"16px","max-width":"1440px"},"fontFamily":{"headline-lg":["Montserrat"],"headline-lg-mobile":["Montserrat"],"label-sm":["Montserrat"],"headline-md":["Montserrat"],"body-md":["Montserrat"],"body-sm":["Montserrat"],"body-lg":["Montserrat"],"headline-xl":["Montserrat"],"label-md":["Montserrat"]},"fontSize":{"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"700"}],"headline-lg-mobile":["28px",{"lineHeight":"36px","fontWeight":"700"}],"label-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.05em","fontWeight":"600"}],"headline-md":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-xl":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-surface"><header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 max-w-[1440px] mx-auto px-margin-mobile lg:px-margin-desktop flex items-center justify-between"><div class="flex items-center gap-base"><span class="material-symbols-outlined text-primary text-[32px]">forest</span><span class="font-headline-md text-headline-md text-primary tracking-tight">FUNGIS <span class="font-normal opacity-70">GeoScore AI</span></span></div><nav class="hidden lg:flex items-center gap-gutter" data-active-classes="text-primary font-bold"><a aria-current="page" class="transition-colors uppercase text-primary font-bold" data-path="admin-planner" href="#">Admin Planner</a><a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors uppercase" data-path="mobile-clue-runner" href="#">Mobile Clue Runner</a><a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors uppercase" data-path="ai-leaderboard" href="#">AI Leaderboard</a><a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors uppercase" data-path="ws-logs" href="#">WS Logs</a><div class="ml-4 border-l border-outline-variant pl-4"><img alt="Profile" class="w-8 h-8 rounded-full object-cover border border-outline-variant hover:ring-2 hover:ring-primary-container cursor-pointer transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBliQnnmsuu7aUUcnZ6koWP0IsPKO0poQ74gKymoXyA8qMQjgpzV1mGDLG__TTjLR9bjbfunm_OdsYB4YsG3EeYQknYubmpJ4x-gQVxoC5zt6i22YkF90jAUnorFp7f5PM315MNcl6YQ0k5kgpKIFbBs2sWGI8s55RPnpEUc-P4tlDUMtPARPo4uHXvUUh-wDGCGGoeZB7hgmDrC4IJjClCi7DOQQGBFeHsEV_DrdYJjE1S2wTUkq3S"/></div></nav></div></header><main class="w-full pt-16 bg-background min-h-screen"><div class="flex flex-col w-full h-full relative" style="min-height: calc(100vh - 4rem - 5rem);">
+<!-- Top actions bar -->
+<div class="w-full bg-surface-container-lowest shadow-sm z-10 px-margin-mobile lg:px-margin-desktop py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Spatial Olympics Course Wizard</h1>
+<p class="font-body-md text-body-md text-text-secondary mt-1">Design and configure geo-spatial challenges.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-10 px-6 rounded-full font-label-md text-label-md bg-surface text-primary border border-primary transition-all hover:bg-primary-container hover:text-on-primary-container uppercase tracking-wide">
+                Discard Draft
+            </button>
+<button class="h-10 px-6 rounded-full font-label-md text-label-md bg-primary text-on-primary shadow-md transition-all hover:bg-surface-tint hover:shadow-lg uppercase tracking-wide flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                Save Course
+            </button>
+</div>
+</div>
+<!-- Main Content Area: Split Layout -->
+<div class="flex-1 flex flex-col lg:flex-row w-full max-w-[1440px] mx-auto overflow-hidden">
+<!-- LEFT COLUMN: Course Parameters & Clues -->
+<div class="w-full lg:w-[45%] flex flex-col overflow-y-auto bg-surface relative z-10 custom-scrollbar pb-24 lg:pb-0">
+<div class="p-margin-mobile lg:p-margin-desktop space-y-12">
+<!-- Section: Course Parameters -->
+<section>
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm">01</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Course Parameters</h2>
+</div>
+<div class="space-y-6">
+<div class="relative group">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Course Title</label>
+<input class="w-full bg-surface-container-lowest rounded-lg py-3 px-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" type="text" value="Kyoto Heritage Sprint"/>
+</div>
+<div class="flex flex-col sm:flex-row gap-6">
+<div class="relative group flex-1">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Duration (mins)</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" type="number" value="120"/>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">timer</span>
+</div>
+</div>
+<div class="relative group flex-1">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Start Location</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" type="text" value="Kyoto Imperial Palace"/>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">location_on</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Theme Selection -->
+<section>
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm">02</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Location Theme</h2>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<button class="text-left p-4 rounded-xl border border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low transition-colors shadow-sm group">
+<span class="material-symbols-outlined text-tertiary mb-2 text-[28px] group-hover:scale-110 transition-transform">history_edu</span>
+<h3 class="font-label-md text-label-md text-on-surface mb-1">Historical &amp; Spatial</h3>
+<p class="font-body-sm text-body-sm text-text-secondary line-clamp-2">Focus on historical progression across geographic zones.</p>
+</button>
+<button class="text-left p-4 rounded-xl border-2 border-primary bg-primary/5 shadow-sm group relative overflow-hidden">
+<div class="absolute top-0 right-0 bg-primary text-on-primary text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg">Active</div>
+<span class="material-symbols-outlined text-primary mb-2 text-[28px] group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">temple_buddhist</span>
+<h3 class="font-label-md text-label-md text-primary mb-1">Cultural Heritage</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Sites of profound cultural and societal impact.</p>
+</button>
+<button class="text-left p-4 rounded-xl border border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low transition-colors shadow-sm group">
+<span class="material-symbols-outlined text-secondary mb-2 text-[28px] group-hover:scale-110 transition-transform">eco</span>
+<h3 class="font-label-md text-label-md text-on-surface mb-1">Eco &amp; Environmental</h3>
+<p class="font-body-sm text-body-sm text-text-secondary line-clamp-2">Natural reserves, topographies, and conservation zones.</p>
+</button>
+<button class="text-left p-4 rounded-xl border border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low transition-colors shadow-sm group">
+<span class="material-symbols-outlined text-inverse-surface mb-2 text-[28px] group-hover:scale-110 transition-transform">satellite_alt</span>
+<h3 class="font-label-md text-label-md text-on-surface mb-1">Geodetic Precision</h3>
+<p class="font-body-sm text-body-sm text-text-secondary line-clamp-2">High-accuracy surveying marks and geospatial anchors.</p>
+</button>
+</div>
+</section>
+<!-- Section: Course Clues -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm">03</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Course Clues</h2>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors shadow-sm">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="space-y-4">
+<!-- Clue 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border-l-4 border-l-primary shadow-sm group hover:shadow-md transition-shadow relative">
+<div class="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-sm shadow-sm">1</div>
+<div class="flex justify-between items-start mb-2 pl-2">
+<h4 class="font-label-md text-label-md text-on-surface">Kinkaku-ji Reflection Point</h4>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded font-label-sm">500 PTS</span>
+</div>
+<p class="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">Identify the precise coordinates where the Golden Pavilion perfectly mirrors on the Kyōko-chi pond surface during summer solstice.</p>
+<div class="flex items-center gap-2 pl-2">
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Visual AI</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">35.0394° N, 135.7292° E</span>
+</div>
+</div>
+<!-- Clue 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border-l-4 border-l-tertiary shadow-sm group hover:shadow-md transition-shadow relative">
+<div class="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center font-label-sm shadow-sm">2</div>
+<div class="flex justify-between items-start mb-2 pl-2">
+<h4 class="font-label-md text-label-md text-on-surface">Nijo Castle Nightingale Floor</h4>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded font-label-sm">750 PTS</span>
+</div>
+<p class="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">Locate the highest decibel emission point on the Ninomaru Palace corridors. Requires audio signature matching.</p>
+<div class="flex items-center gap-2 pl-2">
+<span class="bg-tertiary/10 text-tertiary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Audio AI</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">35.0142° N, 135.7482° E</span>
+</div>
+</div>
+<!-- Clue 3 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border-l-4 border-l-inverse-surface shadow-sm group hover:shadow-md transition-shadow relative">
+<div class="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-inverse-surface text-inverse-on-surface flex items-center justify-center font-label-sm shadow-sm">3</div>
+<div class="flex justify-between items-start mb-2 pl-2">
+<h4 class="font-label-md text-label-md text-on-surface">Geodetic Survey Reference Mark</h4>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded font-label-sm">1000 PTS</span>
+</div>
+<p class="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">Find the hidden First Order Triangulation Station marker near Mount Hiei. Requires millimeter-accuracy GPS validation.</p>
+<div class="flex items-center gap-2 pl-2">
+<span class="bg-inverse-surface/10 text-inverse-surface px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Geospatial</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Elev: 848m</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- RIGHT COLUMN: Interactive Map Canvas -->
+<div class="w-full lg:w-[55%] h-[512px] lg:h-auto relative bg-surface-variant z-0 shadow-inner">
+<!-- Map Container -->
+<div class="w-full h-full bg-cover bg-center" data-location="Kyoto, Japan" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBUthb5ZT3U4JNEXONLQhkTPK2wERhcy10RI5M9qZDjYiLMumC_sluNUxEYTm3zfD-dR9sGes7ipgrjbNdro0vd7oS-jXF4Q4a8vRLrmrg4948Y31si7K3KeRgN7vEoKgm7pDBtQAoMCVplqcoZTciQm9bbScZrpTn9uvC_BOjaP22qLnzCsgJnpRGZSiNBdK9Ebv6E19ZiO_I1lx4i4CWH1J_HLdgxQ21AYKulaZHYPd8y-R6irpgR')"></div>
+<!-- Map Overlay Gradient for depth -->
+<div class="absolute inset-0 bg-gradient-to-r from-surface/20 to-transparent pointer-events-none"></div>
+<!-- Floating Map Controls -->
+<div class="absolute top-6 right-6 flex flex-col gap-2 z-20">
+<div class="bg-surface-container-lowest rounded-xl shadow-md p-1 flex flex-col">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary rounded-lg transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<div class="w-6 h-px bg-border-subtle mx-auto my-1"></div>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary rounded-lg transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+</div>
+<button class="w-12 h-12 bg-surface-container-lowest rounded-full shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary transition-colors mt-2">
+<span class="material-symbols-outlined">my_location</span>
+</button>
+<button class="w-12 h-12 bg-surface-container-lowest rounded-full shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary transition-colors">
+<span class="material-symbols-outlined">layers</span>
+</button>
+</div>
+<!-- Faux Map Markers (Absolute positioned for visual context) -->
+<div class="absolute top-1/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2 z-10 group cursor-pointer hover:z-20 animate-[bounce_3s_ease-in-out_infinite]">
+<div class="relative">
+<span class="material-symbols-outlined text-[48px] text-primary" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="absolute top-3 left-1/2 -translate-x-1/2 font-label-sm text-on-primary z-10">1</span>
+<!-- Hover Tooltip -->
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface-container-lowest p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+<p class="font-label-sm text-on-surface mb-1">Kinkaku-ji</p>
+<p class="font-body-sm text-text-secondary text-[10px]">35.0394° N, 135.7292° E</p>
+</div>
+</div>
+</div>
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 group cursor-pointer hover:z-20">
+<div class="relative">
+<span class="material-symbols-outlined text-[48px] text-tertiary drop-shadow-md" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="absolute top-3 left-1/2 -translate-x-1/2 font-label-sm text-on-tertiary z-10">2</span>
+</div>
+</div>
+<div class="absolute top-1/4 right-1/4 transform -translate-x-1/2 -translate-y-1/2 z-10 group cursor-pointer hover:z-20">
+<div class="relative">
+<span class="material-symbols-outlined text-[48px] text-inverse-surface drop-shadow-md" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="absolute top-3 left-1/2 -translate-x-1/2 font-label-sm text-inverse-on-surface z-10">3</span>
+</div>
+</div>
+<!-- Path Line (Decorative SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-0" style="opacity: 0.4;">
+<path class="text-primary animate-[dash_20s_linear_infinite]" d="M 25% 33% C 40% 40%, 45% 45%, 50% 50% C 60% 40%, 70% 30%, 75% 25%" fill="none" stroke="currentColor" stroke-dasharray="8 8" stroke-width="2"></path>
+</svg>
+<!-- Bottom Data Bar overlaying map -->
+<div class="absolute bottom-6 left-6 right-6 lg:right-auto lg:w-96 bg-surface/90 backdrop-blur-md rounded-xl p-4 shadow-xl border border-border-subtle z-20">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md text-on-surface uppercase tracking-wider">Spatial Analysis</span>
+<span class="bg-primary/20 text-primary px-2 py-0.5 rounded font-mono text-[10px]">LIVE</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-body-sm">
+<span class="text-text-secondary">Total Distance</span>
+<span class="font-mono text-on-surface">14.2 km</span>
+</div>
+<div class="flex justify-between items-center text-body-sm">
+<span class="text-text-secondary">Est. Completion</span>
+<span class="font-mono text-on-surface">3h 45m</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[65%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Micro-interaction styles -->
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: var(--color-surface-dim);
+            border-radius: 10px;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+    </style>
+</div></main><footer class="w-full bg-surface-container border-t border-outline-variant py-gutter mt-auto"><div class="max-w-[1440px] mx-auto px-margin-mobile lg:px-margin-desktop flex items-center justify-between text-on-surface-variant"><div class="font-label-md text-label-md opacity-80">© (c)(r) Get Back 2 Basics</div><div class="font-label-md text-label-md font-mono">Ver: 202310271200</div></div></footer></body></html>
