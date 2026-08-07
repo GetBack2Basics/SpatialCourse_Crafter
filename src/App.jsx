@@ -29,13 +29,12 @@ export default function App() {
     // Connect to WebSocket server on mount
     wsService.connect('ws://localhost:8080/ws');
 
-    const unsubscribe = wsService.subscribe((log) => {
-      setLogs((prev) => [log, ...prev].slice(0, 100));
+    const unsubscribe = wsService.subscribe((logItems) => {
+      setLogs(logItems);
     });
 
     return () => {
       unsubscribe();
-      wsService.disconnect();
     };
   }, []);
 
