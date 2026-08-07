@@ -3,15 +3,20 @@ import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import http from 'http';
+import path from 'path';
+import crypto from 'crypto';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// Serve static frontend assets for single-container Cloud Run deployment
+app.use(express.static('dist'));
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-// Store connected WebSocket clients
+// Connected WebSocket clients set
 const clients = new Set();
 
 wss.on('connection', (ws) => {
@@ -27,7 +32,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Helper to broadcast WebSocket log messages to all clients
+// Helper to broadcast WebSocket log messages
 function broadcastLog(type, message, details = null) {
   const payload = JSON.stringify({
     id: Math.random().toString(36).substr(2, 9),
@@ -53,6 +58,9 @@ if (geminiApiKey) {
 } else {
   console.log("Notice: GEMINI_API_KEY not set in environment. Live AI vision will require GEMINI_API_KEY.");
 }
+
+// COST OPTIMIZATION: In-Memory AI Evaluation Cache ($0 API cost on duplicate photos)
+const aiResponseCache = new Map();
 
 // In-Memory Database for Course & Submissions
 let currentCourse = null;
@@ -114,9 +122,22 @@ app.post('/api/submissions/enqueue', async (req, res) => {
   }, 500);
 });
 
-// Day 1 Overnight Real Gemini AI Vision Validation
+// Day 1 Overnight Real Gemini AI Vision Validation (Cost Optimized)
 app.post('/api/validate-ai', async (req, res) => {
   const { clueId, photoBase64, aiCriteria } = req.body;
+
+  // 1. COST OPTIMIZATION: Compute hash of photo payload to check in-memory cache
+  const photoHash = crypto.createHash('md5').update(photoBase64 || '').digest('hex');
+  const cacheKey = `${clueId}:${photoHash}`;
+
+  if (aiResponseCache.has(cacheKey)) {
+    broadcastLog('AI_QA', `[COST SAVER] Returning cached Gemini AI evaluation ($0 API cost).`);
+    return res.json({
+      success: true,
+      cached: true,
+      geminiResponse: aiResponseCache.get(cacheKey)
+    });
+  }
 
   broadcastLog('AI_QA', `Initiating real Gemini 1.5 Flash Vision AI evaluation...`);
 
@@ -149,7 +170,10 @@ app.post('/api/validate-ai', async (req, res) => {
     const result = await model.generateContent([prompt, imagePart]);
     const responseText = result.response.text();
 
-    broadcastLog('SUCCESS', `Gemini 1.5 Flash Vision evaluation completed successfully.`);
+    // Cache the response
+    aiResponseCache.set(cacheKey, responseText);
+
+    broadcastLog('SUCCESS', `Gemini 1.5 Flash Vision evaluation completed & cached.`);
 
     return res.json({
       success: true,
@@ -161,7 +185,12 @@ app.post('/api/validate-ai', async (req, res) => {
   }
 });
 
+// Fallback route for SPA client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve('dist', 'index.html'));
+});
+
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(`FUNGIS GeoScore AI Node.js Backend listening on port ${PORT}`);
+  console.log(`SpatialCourse_Crafter Node.js Unified Server listening on port ${PORT}`);
 });
