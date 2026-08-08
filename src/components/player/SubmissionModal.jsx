@@ -80,8 +80,19 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     locationLabel = "Waypoint Target GPS";
   }
 
+  const [formError, setFormError] = useState(null);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError(null);
+
+    const isGroupPhotoRequired = clue.requiresGroupPhoto !== false; // Default true per Spatial Olympics rules
+
+    if (isGroupPhotoRequired && !photoPreview) {
+      setFormError("⚠️ Mandatory Group Photo required! Please take or upload a photo showing all team members at this location.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const submissionPayload = {
@@ -99,6 +110,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
         source: locationSource
       },
       photoUrl: photoPreview || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400',
+      isGroupPhotoVerified: Boolean(photoPreview),
       attributes: attributes,
       submittedAt: new Date().toISOString(),
       exifData: exifData,
@@ -119,13 +131,18 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-slate-800 pb-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 uppercase font-bold">
                 Clue #{clue.number} Submission
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-amber-400 border border-slate-800 font-bold">
                 {clue.points} PTS
               </span>
+              {clue.requiresGroupPhoto !== false && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold flex items-center gap-1">
+                  <span>📸 GROUP PHOTO REQUIRED</span>
+                </span>
+              )}
             </div>
             <h3 className="text-xl font-bold text-slate-100 mt-1">{clue.title}</h3>
             <p className="text-xs text-slate-400 mt-0.5">{clue.description}</p>
@@ -137,6 +154,24 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Group Photo Mandatory Banner */}
+        {clue.requiresGroupPhoto !== false && (
+          <div className="p-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-200 flex items-center gap-2 font-mono">
+            <span className="text-lg">📸</span>
+            <div>
+              <span className="font-bold block text-emerald-400 uppercase">Group Photo Required</span>
+              <span>Submit a photo with all team members present at the location to earn full points & group verification bonus.</span>
+            </div>
+          </div>
+        )}
+
+        {formError && (
+          <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-xs text-rose-200 font-semibold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{formError}</span>
+          </div>
+        )}
 
         {/* Location Reference Target Photo (What to look for) */}
         {clue.referencePhotoUrl && (
