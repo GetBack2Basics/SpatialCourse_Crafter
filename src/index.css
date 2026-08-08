@@ -1,5 +1,9 @@
 @import "https://unpkg.com/maplibre-gl@4.1.0/dist/maplibre-gl.css";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Custom Scrollbar from Stitch code.html */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

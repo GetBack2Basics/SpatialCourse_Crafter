@@ -75,7 +75,27 @@ export default {
       fontFamily: {
         sans: ["Montserrat", "sans-serif"],
         headline: ["Montserrat", "sans-serif"],
+        "headline-lg": ["Montserrat", "sans-serif"],
+        "headline-lg-mobile": ["Montserrat", "sans-serif"],
+        "label-sm": ["Montserrat", "sans-serif"],
+        "headline-md": ["Montserrat", "sans-serif"],
+        "body-md": ["Montserrat", "sans-serif"],
+        "body-sm": ["Montserrat", "sans-serif"],
+        "body-lg": ["Montserrat", "sans-serif"],
+        "headline-xl": ["Montserrat", "sans-serif"],
+        "label-md": ["Montserrat", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"]
+      },
+      fontSize: {
+        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+        "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
       }
     }
   },
