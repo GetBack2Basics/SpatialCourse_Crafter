@@ -131,7 +131,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface font-body-md relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-body-md relative overflow-x-hidden">
       {/* Header Bar */}
       <Header
         activeTab={activeTab}

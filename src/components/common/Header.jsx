@@ -13,14 +13,14 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
 
   return (
     <>
-      <header className="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-border-subtle">
+      <header className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl shadow-lg border-b border-slate-800/80 text-slate-100">
         <div className="h-16 max-w-[1440px] mx-auto px-margin-mobile lg:px-margin-desktop flex items-center justify-between">
           
           {/* Logo & Title */}
           <div className="flex items-center gap-base cursor-pointer" onClick={() => handleTabChange('ADMIN')}>
             <span className="material-symbols-outlined text-primary text-[32px]">forest</span>
             <span className="font-headline-md text-headline-md text-primary tracking-tight">
-              SpatialCourse <span className="font-normal opacity-70 text-on-surface">Crafter</span>
+              SpatialCourse <span className="font-normal opacity-70 text-slate-300">Crafter</span>
             </span>
           </div>
 
