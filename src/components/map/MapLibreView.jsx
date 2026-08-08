@@ -1,7 +1,28 @@
 // GeoLibre-Inspired MapLibre GL JS Component for Open-Source Mapping
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
+
+const BASEMAPS = {
+  osm: {
+    name: 'OpenStreetMap',
+    icon: 'map',
+    url: 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors | GeoLibre Map Engine'
+  },
+  satellite: {
+    name: 'Satellite Imagery',
+    icon: 'satellite_alt',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '© Esri, Maxar, Earthstar Geographics'
+  },
+  terrain: {
+    name: 'Terrain Topo',
+    icon: 'terrain',
+    url: 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenTopoMap, SRTM | OpenStreetMap'
+  }
+};
 
 export default function MapLibreView({
   center = [145.7781, -16.9186], // [lng, lat] for MapLibre
@@ -21,30 +42,33 @@ export default function MapLibreView({
   const mapRef = useRef(null);
   const markersRef = useRef([]);
 
+  // Layer Switcher State
+  const [activeBasemap, setActiveBasemap] = useState('osm');
+  const [showMapillary, setShowMapillary] = useState(false);
+  const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(zoom);
+
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Initialize MapLibre map with OpenStreetMap / Carto DB raster tiles
+    // Initialize MapLibre map with selected raster tile basemap
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: {
         version: 8,
         sources: {
-          'osm-tiles': {
+          'base-tiles': {
             type: 'raster',
-            tiles: [
-              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
+            tiles: [BASEMAPS.osm.url],
             tileSize: 256,
-            attribution: '© OpenStreetMap contributors | GeoLibre Map Engine'
+            attribution: BASEMAPS.osm.attribution
           }
         },
         layers: [
           {
-            id: 'osm-layer',
+            id: 'base-layer',
             type: 'raster',
-            source: 'osm-tiles',
+            source: 'base-tiles',
             minzoom: 0,
             maxzoom: 19
           }
@@ -56,6 +80,11 @@ export default function MapLibreView({
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
+
+    // Track zoom level changes for cluster recalculations
+    map.on('zoomend', () => {
+      setCurrentZoom(Math.round(map.getZoom() * 10) / 10);
+    });
 
     return () => {
       map.remove();
@@ -69,7 +98,67 @@ export default function MapLibreView({
     }
   }, [center]);
 
-  // Render Clue Markers, Start Marker, Finish Marker & User Location Pin
+  // Handle Basemap Layer Switching (OSM, Satellite, Terrain)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const source = map.getSource('base-tiles');
+    if (source && BASEMAPS[activeBasemap]) {
+      const selected = BASEMAPS[activeBasemap];
+      if (map.getLayer('base-layer')) map.removeLayer('base-layer');
+      if (map.getSource('base-tiles')) map.removeSource('base-tiles');
+
+      map.addSource('base-tiles', {
+        type: 'raster',
+        tiles: [selected.url],
+        tileSize: 256,
+        attribution: selected.attribution
+      });
+
+      map.addLayer({
+        id: 'base-layer',
+        type: 'raster',
+        source: 'base-tiles',
+        minzoom: 0,
+        maxzoom: 19
+      }, map.getStyle().layers[0]?.id);
+    }
+  }, [activeBasemap]);
+
+  // Handle Mapillary Street View Overlay Toggle
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    if (showMapillary) {
+      if (!map.getSource('mapillary-source')) {
+        map.addSource('mapillary-source', {
+          type: 'raster',
+          tiles: [
+            'https://raster-tiles.mapillary.com/v3/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '© Mapillary Street View Coverage'
+        });
+      }
+
+      if (!map.getLayer('mapillary-layer')) {
+        map.addLayer({
+          id: 'mapillary-layer',
+          type: 'raster',
+          source: 'mapillary-source',
+          paint: { 'raster-opacity': 0.75 }
+        });
+      }
+    } else {
+      if (map.getLayer('mapillary-layer')) {
+        map.removeLayer('mapillary-layer');
+      }
+    }
+  }, [showMapillary]);
+
+  // Render Clue Markers, Start Marker, Finish Marker & Overlapping Marker Clusters
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -78,72 +167,42 @@ export default function MapLibreView({
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    // 0a. Render Start Location Marker (Draggable)
+    // Collect all active points
+    const points = [];
+
     if (startLocation && startLocation.lat && startLocation.lng) {
-      const el = document.createElement('div');
-      el.className = 'w-9 h-9 rounded-full bg-amber-500 border-2 border-white shadow-xl flex items-center justify-center font-bold text-xs text-slate-950 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform';
-      el.title = 'Drag on map to reposition Start Location';
-      el.innerHTML = '<span class="material-symbols-outlined text-[20px]">flag</span>';
-
-      const startMarker = new maplibregl.Marker({ element: el, draggable: true })
-        .setLngLat([startLocation.lng, startLocation.lat])
-        .setPopup(
-          new maplibregl.Popup({ offset: 25 }).setHTML(`
-            <div class="p-1">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">START LOCATION (DRAGGABLE)</span>
-              <h4 class="font-bold text-sm mt-1 text-slate-100">${startLocation.name || 'Course Start'}</h4>
-              <div class="mt-1 text-xs font-mono text-cyan-400">Activation Zone: ${startLocation.activationRadiusMeters || 100}m</div>
-              <div class="text-[10px] font-mono text-slate-400 mt-0.5">${startLocation.lat.toFixed(5)}°, ${startLocation.lng.toFixed(5)}°</div>
-              <p class="text-[10px] text-amber-400 mt-1 italic">Drag marker to reposition Start location!</p>
-            </div>
-          `)
-        )
-        .addTo(map);
-
-      startMarker.on('dragend', () => {
-        const lngLat = startMarker.getLngLat();
-        onUpdateStartLocation({
-          lat: parseFloat(lngLat.lat.toFixed(6)),
-          lng: parseFloat(lngLat.lng.toFixed(6))
-        });
+      points.push({
+        type: 'START',
+        id: 'start-node',
+        lat: startLocation.lat,
+        lng: startLocation.lng,
+        name: startLocation.name || 'Course Start',
+        data: startLocation
       });
-
-      markersRef.current.push(startMarker);
     }
 
-    // 0b. Render Finish Location Marker (Draggable)
     if (finishLocation && finishLocation.lat && finishLocation.lng) {
-      const el = document.createElement('div');
-      el.className = 'w-9 h-9 rounded-full bg-rose-600 border-2 border-white shadow-xl flex items-center justify-center font-bold text-xs text-white cursor-grab active:cursor-grabbing hover:scale-110 transition-transform';
-      el.title = 'Drag on map to reposition Finish Location';
-      el.innerHTML = '<span class="material-symbols-outlined text-[20px]">sports_score</span>';
-
-      const finishMarker = new maplibregl.Marker({ element: el, draggable: true })
-        .setLngLat([finishLocation.lng, finishLocation.lat])
-        .setPopup(
-          new maplibregl.Popup({ offset: 25 }).setHTML(`
-            <div class="p-1">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">FINISH LOCATION (DRAGGABLE)</span>
-              <h4 class="font-bold text-sm mt-1 text-slate-100">${finishLocation.name || 'Course Finish'}</h4>
-              <div class="text-[10px] font-mono text-slate-400 mt-1">${finishLocation.lat.toFixed(5)}°, ${finishLocation.lng.toFixed(5)}°</div>
-              <p class="text-[10px] text-rose-400 mt-1 italic">Drag marker to reposition Finish location!</p>
-            </div>
-          `)
-        )
-        .addTo(map);
-
-      finishMarker.on('dragend', () => {
-        const lngLat = finishMarker.getLngLat();
-        onUpdateFinishLocation({
-          lat: parseFloat(lngLat.lat.toFixed(6)),
-          lng: parseFloat(lngLat.lng.toFixed(6))
-        });
+      points.push({
+        type: 'FINISH',
+        id: 'finish-node',
+        lat: finishLocation.lat,
+        lng: finishLocation.lng,
+        name: finishLocation.name || 'Course Finish',
+        data: finishLocation
       });
-
-      markersRef.current.push(finishMarker);
     }
 
-    // 1. Render User Location Pin
+    clues.forEach(clue => {
+      points.push({
+        type: 'CLUE',
+        id: clue.id,
+        lat: clue.targetLocation.lat,
+        lng: clue.targetLocation.lng,
+        name: `Clue #${clue.number}: ${clue.title}`,
+        data: clue
+      });
+    });
+
     if (userLocation) {
       const el = document.createElement('div');
       el.className = 'w-6 h-6 rounded-full bg-cyan-400 border-2 border-white shadow-lg shadow-cyan-500/50 animate-pulse flex items-center justify-center';
@@ -156,56 +215,183 @@ export default function MapLibreView({
       markersRef.current.push(userMarker);
     }
 
-    // 2. Render Course Clue Markers (Draggable)
-    clues.forEach(clue => {
-      const isActive = clue.id === activeClueId;
-      const isCompleted = submissions.some(s => s.clueId === clue.id);
+    // Cluster calculation: group points that overlap in screen space (< 40px)
+    const clusters = [];
+    const processed = new Set();
+    const pixelRadiusThreshold = 40;
 
-      const el = document.createElement('div');
-      el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 ${
-        isCompleted
-          ? 'bg-emerald-500 text-white border-2 border-emerald-300'
-          : isActive
-          ? 'bg-sky-500 text-white border-2 border-white ring-4 ring-sky-400/40 animate-bounce'
-          : 'bg-slate-800 text-slate-200 border-2 border-slate-600'
-      }`;
-      el.innerText = clue.number;
-      el.title = `Waypoint #${clue.number} (Drag on map to reposition)`;
-      el.onclick = () => onSelectClue(clue.id);
+    points.forEach((pt, i) => {
+      if (processed.has(pt.id)) return;
 
-      const markerRadius = clue.targetRadiusMeters || startLocation?.activationRadiusMeters || 100;
+      const screenPos1 = map.project([pt.lng, pt.lat]);
+      const clusterGroup = [pt];
+      processed.add(pt.id);
 
-      const marker = new maplibregl.Marker({ element: el, draggable: true })
-        .setLngLat([clue.targetLocation.lng, clue.targetLocation.lat])
-        .setPopup(
-          new maplibregl.Popup({ offset: 25 }).setHTML(`
-            <div class="p-1">
-              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${clue.category}</span>
-              <h4 class="font-bold text-base mt-1 text-slate-100">Clue #${clue.number}: ${clue.title}</h4>
-              <p class="text-xs text-slate-300 mt-1">${clue.description}</p>
-              <div class="mt-2 text-xs font-mono text-cyan-400">Activation Zone: ${markerRadius}m</div>
-              <p class="text-[10px] text-cyan-400 mt-1 italic">Drag marker to reposition waypoint</p>
-            </div>
-          `)
-        )
-        .addTo(map);
+      for (let j = i + 1; j < points.length; j++) {
+        const otherPt = points[j];
+        if (processed.has(otherPt.id)) continue;
 
-      marker.on('dragend', () => {
-        const lngLat = marker.getLngLat();
-        onUpdateClueLocation(clue.id, {
-          lat: parseFloat(lngLat.lat.toFixed(6)),
-          lng: parseFloat(lngLat.lng.toFixed(6))
-        });
-      });
+        const screenPos2 = map.project([otherPt.lng, otherPt.lat]);
+        const dx = screenPos1.x - screenPos2.x;
+        const dy = screenPos1.y - screenPos2.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      markersRef.current.push(marker);
+        if (dist < pixelRadiusThreshold) {
+          clusterGroup.push(otherPt);
+          processed.add(otherPt.id);
+        }
+      }
+
+      clusters.push(clusterGroup);
     });
 
-    // 3. Render Line of Sight (LOS) Vector & Walking Route Polylines
+    // Render Clusters or Individual Draggable Markers
+    clusters.forEach(group => {
+      if (group.length > 1) {
+        // Render Cluster Badge Marker for Overlapping Icons
+        const avgLat = group.reduce((sum, p) => sum + p.lat, 0) / group.length;
+        const avgLng = group.reduce((sum, p) => sum + p.lng, 0) / group.length;
+
+        const el = document.createElement('div');
+        el.className = 'w-11 h-11 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 border-2 border-white shadow-2xl flex items-center justify-center font-bold text-sm text-white cursor-pointer hover:scale-115 transition-all ring-4 ring-sky-400/40 animate-pulse';
+        el.innerText = `${group.length}`;
+        el.title = `${group.length} overlapping locations! Click to expand/zoom.`;
+
+        const clusterMarker = new maplibregl.Marker({ element: el })
+          .setLngLat([avgLng, avgLat])
+          .setPopup(
+            new maplibregl.Popup({ offset: 25 }).setHTML(`
+              <div class="p-2 font-mono text-xs">
+                <span class="font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${group.length} OVERLAPPING POIs</span>
+                <ul class="mt-2 space-y-1 text-slate-200">
+                  ${group.map(g => `<li class="truncate">• ${g.name}</li>`).join('')}
+                </ul>
+                <p class="text-[10px] text-cyan-400 mt-2 italic">Click cluster to zoom in & decompose markers</p>
+              </div>
+            `)
+          )
+          .addTo(map);
+
+        el.onclick = () => {
+          map.flyTo({ center: [avgLng, avgLat], zoom: map.getZoom() + 2.5, duration: 800 });
+        };
+
+        markersRef.current.push(clusterMarker);
+      } else {
+        // Render Individual Draggable Marker
+        const pt = group[0];
+
+        if (pt.type === 'START') {
+          const el = document.createElement('div');
+          el.className = 'w-9 h-9 rounded-full bg-amber-500 border-2 border-white shadow-xl flex items-center justify-center font-bold text-xs text-slate-950 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform';
+          el.title = 'Drag on map to reposition Start Location';
+          el.innerHTML = '<span class="material-symbols-outlined text-[20px]">flag</span>';
+
+          const startMarker = new maplibregl.Marker({ element: el, draggable: true })
+            .setLngLat([pt.lng, pt.lat])
+            .setPopup(
+              new maplibregl.Popup({ offset: 25 }).setHTML(`
+                <div class="p-1">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">START LOCATION (DRAGGABLE)</span>
+                  <h4 class="font-bold text-sm mt-1 text-slate-100">${pt.name}</h4>
+                  <div class="mt-1 text-xs font-mono text-cyan-400">Activation Zone: ${pt.data.activationRadiusMeters || 100}m</div>
+                  <div class="text-[10px] font-mono text-slate-400 mt-0.5">${pt.lat.toFixed(5)}°, ${pt.lng.toFixed(5)}°</div>
+                  <p class="text-[10px] text-amber-400 mt-1 italic">Drag marker to reposition Start location!</p>
+                </div>
+              `)
+            )
+            .addTo(map);
+
+          startMarker.on('dragend', () => {
+            const lngLat = startMarker.getLngLat();
+            onUpdateStartLocation({
+              lat: parseFloat(lngLat.lat.toFixed(6)),
+              lng: parseFloat(lngLat.lng.toFixed(6))
+            });
+          });
+
+          markersRef.current.push(startMarker);
+        } else if (pt.type === 'FINISH') {
+          const el = document.createElement('div');
+          el.className = 'w-9 h-9 rounded-full bg-rose-600 border-2 border-white shadow-xl flex items-center justify-center font-bold text-xs text-white cursor-grab active:cursor-grabbing hover:scale-110 transition-transform';
+          el.title = 'Drag on map to reposition Finish Location';
+          el.innerHTML = '<span class="material-symbols-outlined text-[20px]">sports_score</span>';
+
+          const finishMarker = new maplibregl.Marker({ element: el, draggable: true })
+            .setLngLat([pt.lng, pt.lat])
+            .setPopup(
+              new maplibregl.Popup({ offset: 25 }).setHTML(`
+                <div class="p-1">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">FINISH LOCATION (DRAGGABLE)</span>
+                  <h4 class="font-bold text-sm mt-1 text-slate-100">${pt.name}</h4>
+                  <div class="text-[10px] font-mono text-slate-400 mt-1">${pt.lat.toFixed(5)}°, ${pt.lng.toFixed(5)}°</div>
+                  <p class="text-[10px] text-rose-400 mt-1 italic">Drag marker to reposition Finish location!</p>
+                </div>
+              `)
+            )
+            .addTo(map);
+
+          finishMarker.on('dragend', () => {
+            const lngLat = finishMarker.getLngLat();
+            onUpdateFinishLocation({
+              lat: parseFloat(lngLat.lat.toFixed(6)),
+              lng: parseFloat(lngLat.lng.toFixed(6))
+            });
+          });
+
+          markersRef.current.push(finishMarker);
+        } else if (pt.type === 'CLUE') {
+          const clue = pt.data;
+          const isActive = clue.id === activeClueId;
+          const isCompleted = submissions.some(s => s.clueId === clue.id);
+
+          const el = document.createElement('div');
+          el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 ${
+            isCompleted
+              ? 'bg-emerald-500 text-white border-2 border-emerald-300'
+              : isActive
+              ? 'bg-sky-500 text-white border-2 border-white ring-4 ring-sky-400/40 animate-bounce'
+              : 'bg-slate-800 text-slate-200 border-2 border-slate-600'
+          }`;
+          el.innerText = clue.number;
+          el.title = `Waypoint #${clue.number} (Drag on map to reposition)`;
+          el.onclick = () => onSelectClue(clue.id);
+
+          const markerRadius = clue.targetRadiusMeters || startLocation?.activationRadiusMeters || 100;
+
+          const marker = new maplibregl.Marker({ element: el, draggable: true })
+            .setLngLat([clue.targetLocation.lng, clue.targetLocation.lat])
+            .setPopup(
+              new maplibregl.Popup({ offset: 25 }).setHTML(`
+                <div class="p-1">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${clue.category}</span>
+                  <h4 class="font-bold text-base mt-1 text-slate-100">Clue #${clue.number}: ${clue.title}</h4>
+                  <p class="text-xs text-slate-300 mt-1">${clue.description}</p>
+                  <div class="mt-2 text-xs font-mono text-cyan-400">Activation Zone: ${markerRadius}m</div>
+                  <p class="text-[10px] text-cyan-400 mt-1 italic">Drag marker to reposition waypoint</p>
+                </div>
+              `)
+            )
+            .addTo(map);
+
+          marker.on('dragend', () => {
+            const lngLat = marker.getLngLat();
+            onUpdateClueLocation(clue.id, {
+              lat: parseFloat(lngLat.lat.toFixed(6)),
+              lng: parseFloat(lngLat.lng.toFixed(6))
+            });
+          });
+
+          markersRef.current.push(marker);
+        }
+      }
+    });
+
+    // Render Line of Sight (LOS) Vector & Walking Route Polylines
     const updateGeoJSONLayers = () => {
       if (!map || !map.getStyle()) return;
 
-      // A) Line of Sight (Dashed Line): User Location / Start -> Active Waypoint
+      // A) Line of Sight (Dashed Line)
       const activeClue = clues.find(c => c.id === activeClueId) || clues[0];
       const targetPoint = activeClue ? activeClue.targetLocation : (startLocation || { lat: center[1], lng: center[0] });
       const originPoint = userLocation || startLocation;
@@ -245,7 +431,7 @@ export default function MapLibreView({
         }
       }
 
-      // B) Walking Route Polyline: Start Location -> Clue 1 -> Clue 2 -> Clue 3... -> Finish Location
+      // B) Walking Route Polyline
       if (startLocation && startLocation.lat && startLocation.lng && clues.length > 0) {
         const routeCoords = [
           [startLocation.lng, startLocation.lat],
@@ -304,16 +490,77 @@ export default function MapLibreView({
       map.once('load', updateGeoJSONLayers);
     }
 
-  }, [startLocation, finishLocation, clues, activeClueId, userLocation, submissions]);
+  }, [startLocation, finishLocation, clues, activeClueId, userLocation, submissions, currentZoom]);
 
   return (
     <div className="relative w-full h-full min-h-[350px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
       <div ref={mapContainerRef} className="w-full h-full min-h-[350px]" />
       
-      {/* GeoLibre Open-Source Mapping Badge */}
+      {/* GeoLibre Open-Source Mapping & Layer Badge */}
       <div className="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-sky-500/30 flex items-center gap-2 text-xs font-mono text-sky-300 shadow-lg z-10">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-        <span>GeoLibre OSM Vector Engine</span>
+        <span>GeoLibre Engine ({BASEMAPS[activeBasemap].name})</span>
+      </div>
+
+      {/* Floating Basemap & Mapillary Layer Switcher */}
+      <div className="absolute top-3 right-14 z-20">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsLayerMenuOpen(!isLayerMenuOpen)}
+            className="h-9 px-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-sky-400 border border-sky-500/40 shadow-xl flex items-center gap-1.5 text-xs font-mono font-bold backdrop-blur-md cursor-pointer transition-all"
+            title="Switch Basemap & Street View"
+          >
+            <span className="material-symbols-outlined text-sm">layers</span>
+            <span className="hidden sm:inline">Layers</span>
+          </button>
+
+          {isLayerMenuOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-slate-950/95 backdrop-blur-xl border border-sky-500/40 rounded-2xl p-3 shadow-2xl text-xs space-y-3 z-30">
+              <div className="font-bold text-sky-300 uppercase tracking-wider font-mono text-[10px]">Basemap Selector</div>
+              
+              <div className="space-y-1">
+                {Object.entries(BASEMAPS).map(([key, bm]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setActiveBasemap(key);
+                      setIsLayerMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 font-semibold transition-all cursor-pointer ${
+                      activeBasemap === key
+                        ? 'bg-sky-500 text-white font-bold shadow-md'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">{bm.icon}</span>
+                    <span>{bm.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-slate-800">
+                <div className="font-bold text-sky-300 uppercase tracking-wider font-mono text-[10px] mb-1.5">Overlays & Street View</div>
+                <button
+                  type="button"
+                  onClick={() => setShowMapillary(!showMapillary)}
+                  className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between font-semibold transition-all cursor-pointer ${
+                    showMapillary
+                      ? 'bg-emerald-600 text-white font-bold shadow-md'
+                      : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">streetview</span>
+                    <span>Mapillary Street View</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900">{showMapillary ? 'ON' : 'OFF'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

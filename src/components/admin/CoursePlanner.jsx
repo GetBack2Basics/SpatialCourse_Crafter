@@ -33,6 +33,10 @@ export default function CoursePlanner({
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Finish location autocomplete state
+  const [finishLocationSuggestions, setFinishLocationSuggestions] = useState([]);
+  const [showFinishSuggestions, setShowFinishSuggestions] = useState(false);
+
   // Editing clue modal state
   const [editingClue, setEditingClue] = useState(null);
 
@@ -79,6 +83,33 @@ export default function CoursePlanner({
 
     return () => clearTimeout(timer);
   }, [startName]);
+
+  // Real-time location search & autofill when typing 3+ characters in Finish Location Name
+  useEffect(() => {
+    if (!finishName || finishName.trim().length < 3) {
+      setFinishLocationSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(finishName)}&limit=5`);
+        if (res.ok) {
+          const data = await res.json();
+          const formatted = data.map(item => ({
+            display_name: item.display_name,
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon)
+          }));
+          setFinishLocationSuggestions(formatted);
+        }
+      } catch (e) {
+        console.warn("Finish geocoding lookup notice:", e);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [finishName]);
 
   // Move Clue Up or Down in order
   const handleMoveClue = (clueId, direction) => {
@@ -531,21 +562,61 @@ export default function CoursePlanner({
                   </div>
                 </div>
 
-                {/* Finish Location Name & Drag Indicator */}
+                {/* Finish Location Name & Drag Indicator with Autocomplete */}
                 <div className="relative group">
                   <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase flex justify-between items-center">
                     <span>Finish Location Name (Draggable)</span>
-                    <span className="text-[11px] text-rose-500 font-normal">Drag red finish pin on map to update</span>
+                    <span className="text-[11px] text-rose-500 font-normal">Type 3+ chars for search & autofill</span>
                   </label>
                   <div className="relative">
                     <input
                       className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all shadow-sm"
                       type="text"
-                      placeholder="e.g. Style Point Moorings..."
+                      placeholder="e.g. Style Point Moorings, Marlin Marina..."
                       value={finishName}
-                      onChange={e => setFinishName(e.target.value)}
+                      onChange={e => {
+                        setFinishName(e.target.value);
+                        setShowFinishSuggestions(true);
+                      }}
+                      onFocus={() => setShowFinishSuggestions(true)}
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-rose-500">sports_score</span>
+
+                    {/* Autocomplete Dropdown for Finish Location */}
+                    {showFinishSuggestions && finishLocationSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-surface-container-lowest border border-rose-500/40 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border-subtle">
+                        {finishLocationSuggestions.map((item, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setFinishName(item.display_name);
+                              setFinishLat(item.lat);
+                              setFinishLng(item.lng);
+                              setShowFinishSuggestions(false);
+                              onUpdateCourse({
+                                ...course,
+                                finishLocation: {
+                                  ...course.finishLocation,
+                                  name: item.display_name,
+                                  lat: item.lat,
+                                  lng: item.lng
+                                }
+                              });
+                              wsService.emitLog('SPATIAL', `Selected finish location from autofill: ${item.display_name} (${item.lat}, ${item.lng})`);
+                              showToast(`🏁 Finish Location set to: ${item.display_name.split(',')[0]}`);
+                            }}
+                            className="w-full text-left p-3 hover:bg-rose-500/10 transition-colors flex items-start gap-2.5 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-rose-500 text-sm mt-0.5">place</span>
+                            <div>
+                              <div className="font-bold text-xs text-on-surface">{item.display_name}</div>
+                              <div className="text-[10px] font-mono text-text-secondary">{item.lat.toFixed(5)}°, {item.lng.toFixed(5)}°</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
