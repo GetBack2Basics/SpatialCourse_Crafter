@@ -9,9 +9,11 @@ import { PRESET_COURSES } from './data/initialCourse';
 import { wsService } from './services/websocketService';
 import { teamMergeService } from './services/teamMergeService';
 
+import AuthModal from './components/common/AuthModal';
+import { authService } from './services/authService';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
-    // Check URL search parameters or hash for explicit tab
     const params = new URLSearchParams(window.location.search);
     const tabParam = (params.get('tab') || params.get('mode') || '').toUpperCase();
     if (['ADMIN', 'PLAYER', 'SCORING'].includes(tabParam)) {
@@ -20,7 +22,6 @@ export default function App() {
     if (['RUNNER', 'CLUE_RUNNER', 'FIELD', 'MOBILE'].includes(tabParam)) {
       return 'PLAYER';
     }
-    // If accessed on a mobile phone viewport (screen width < 768px), default to Mobile Clue Runner ('PLAYER')
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return 'PLAYER';
     }
@@ -50,8 +51,12 @@ export default function App() {
   // Submissions state synced with teamMergeService
   const [submissions, setSubmissions] = useState([]);
 
-  // Active player team
-  const [activeTeam] = useState({ id: 'team-mango', name: 'Team Mango (NSW)', members: ['Jordan', 'Taylor'] });
+  // Authenticated User State & Modal State
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Active team derived from auth state
+  const activeTeam = { id: 'team-mango', name: 'Team Mango (NSW)', members: [currentUser?.email || 'Jordan', 'Taylor'] };
 
   useEffect(() => {
     // Connect to WebSocket server on mount
@@ -65,9 +70,14 @@ export default function App() {
       setSubmissions(subs);
     });
 
+    const unsubscribeAuth = authService.subscribe(({ currentUser: user }) => {
+      setCurrentUser(user);
+    });
+
     return () => {
       unsubscribeWs();
       unsubscribeMerge();
+      unsubscribeAuth();
     };
   }, []);
 
@@ -129,6 +139,8 @@ export default function App() {
         logCount={logs.length}
         toggleLogs={() => setShowLogs(!showLogs)}
         activeTeam={activeTeam}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
 
       {/* Main Tab Content */}
@@ -165,6 +177,13 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Auth & RBAC Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentUser={currentUser}
+      />
 
       {/* WebSocket Logs Terminal Drawer */}
       {showLogs && (

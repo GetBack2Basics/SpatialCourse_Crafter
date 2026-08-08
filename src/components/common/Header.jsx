@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 
-export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, activeTeam }) {
+export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, activeTeam, currentUser, onOpenAuthModal }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isSuperAdmin = currentUser && currentUser.email?.toLowerCase() === 'coreagc@gmail.com';
+  const isAdmin = isSuperAdmin || (currentUser && currentUser.role === 'ADMIN');
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -61,13 +64,26 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
               </span>
             </button>
 
-            <div className="ml-4 border-l border-outline-variant pl-4 flex items-center gap-2">
+            <div
+              onClick={onOpenAuthModal}
+              className="ml-4 border-l border-outline-variant pl-4 flex items-center gap-2 cursor-pointer group"
+              title="Click to manage account auth & team roles"
+            >
               <img
                 alt="Profile"
-                className="w-8 h-8 rounded-full object-cover border border-outline-variant hover:ring-2 hover:ring-primary-container cursor-pointer transition-all"
+                className="w-8 h-8 rounded-full object-cover border border-outline-variant group-hover:ring-2 group-hover:ring-primary transition-all"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuBliQnnmsuu7aUUcnZ6koWP0IsPKO0poQ74gKymoXyA8qMQjgpzV1mGDLG__TTjLR9bjbfunm_OdsYB4YsG3EeYQknYubmpJ4x-gQVxoC5zt6i22YkF90jAUnorFp7f5PM315MNcl6YQ0k5kgpKIFbBs2sWGI8s55RPnpEUc-P4tlDUMtPARPo4uHXvUUh-wDGCGGoeZB7hgmDrC4IJjClCi7DOQQGBFeHsEV_DrdYJjE1S2wTUkq3S"
               />
-              <span className="text-xs font-bold text-primary">{activeTeam?.name || 'Team Mango'}</span>
+              <div className="flex flex-col text-left">
+                <span className="text-xs font-bold text-primary">{currentUser?.name || 'George Corea'}</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded w-fit ${
+                  isSuperAdmin ? 'bg-purple-900/60 text-purple-300 border border-purple-700' :
+                  isAdmin ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' :
+                  'bg-sky-900/60 text-sky-300 border border-sky-700'
+                }`}>
+                  {isSuperAdmin ? 'SUPER ADMIN' : isAdmin ? 'ADMIN' : 'PLAYER'}
+                </span>
+              </div>
             </div>
           </nav>
 
