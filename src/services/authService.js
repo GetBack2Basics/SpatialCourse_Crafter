@@ -222,12 +222,22 @@ class AuthService {
       throw new Error(`Email "${newEmail}" is already in use by another account.`);
     }
 
+    const targetTeamIds = updatedFields.assignedTeamIds !== undefined 
+      ? updatedFields.assignedTeamIds 
+      : (updatedFields.teamId ? [updatedFields.teamId] : (targetUser.assignedTeamIds || (targetUser.teamId ? [targetUser.teamId] : [])));
+
+    const targetCourseIds = updatedFields.assignedCourseIds !== undefined
+      ? updatedFields.assignedCourseIds
+      : (targetUser.assignedCourseIds || []);
+
     const updatedUser = {
       ...targetUser,
       name: updatedFields.name !== undefined ? updatedFields.name : targetUser.name,
       email: newEmail,
       role: newRole,
-      teamId: updatedFields.teamId !== undefined ? updatedFields.teamId : targetUser.teamId,
+      teamId: targetTeamIds[0] || '',
+      assignedTeamIds: targetTeamIds,
+      assignedCourseIds: targetCourseIds,
       organization: updatedFields.organization !== undefined ? updatedFields.organization : targetUser.organization,
       phone: updatedFields.phone !== undefined ? updatedFields.phone : targetUser.phone,
       notes: updatedFields.notes !== undefined ? updatedFields.notes : targetUser.notes,
@@ -236,21 +246,28 @@ class AuthService {
 
     const updatedUsers = [...this.users];
     updatedUsers[userIndex] = updatedUser;
-    this.saveUsers(updatedUsers);
 
     // Update active session if editing currently logged-in user
     if (this.currentUser && this.currentUser.email.toLowerCase() === cleanOriginal) {
       this.saveSession(updatedUser);
     }
 
-    // If email changed, update team member references
-    if (newEmail !== cleanOriginal) {
-      const updatedTeams = this.teams.map(team => ({
-        ...team,
-        members: team.members.map(m => m.toLowerCase() === cleanOriginal ? newEmail : m)
-      }));
-      this.saveTeams(updatedTeams);
-    }
+    // Synchronize team memberships based on targetTeamIds
+    let updatedTeams = this.teams.map(team => {
+      let members = team.members.map(m => m.toLowerCase() === cleanOriginal ? newEmail : m);
+      const isAssigned = targetTeamIds.includes(team.id);
+      
+      if (isAssigned && !members.includes(newEmail)) {
+        members.push(newEmail);
+      } else if (!isAssigned && members.includes(newEmail)) {
+        members = members.filter(m => m.toLowerCase() !== newEmail);
+      }
+
+      return { ...team, members };
+    });
+
+    this.saveTeams(updatedTeams);
+    this.saveUsers(updatedUsers);
 
     return updatedUser;
   }
@@ -305,18 +322,64 @@ class AuthService {
     }
 
     const existing = this.teams[teamIndex];
+    const newMembers = updatedFields.members !== undefined ? updatedFields.members : existing.members;
+    const newCourses = updatedFields.assignedCourseIds !== undefined ? updatedFields.assignedCourseIds : (existing.assignedCourseIds || []);
+
     const updatedTeam = {
       ...existing,
       name: updatedFields.name !== undefined ? updatedFields.name : existing.name,
-      members: updatedFields.members !== undefined ? updatedFields.members : existing.members,
-      assignedCourseIds: updatedFields.assignedCourseIds !== undefined ? updatedFields.assignedCourseIds : existing.assignedCourseIds,
+      members: newMembers,
+      assignedCourseIds: newCourses,
       updatedAt: new Date().toISOString()
     };
 
     const updatedTeams = [...this.teams];
     updatedTeams[teamIndex] = updatedTeam;
     this.saveTeams(updatedTeams);
+
+    // Sync member users' assignedTeamIds
+    const updatedUsers = this.users.map(user => {
+      const isMember = newMembers.includes(user.email.toLowerCase()) || newMembers.includes(user.email);
+      let assignedTeamIds = user.assignedTeamIds || (user.teamId ? [user.teamId] : []);
+      
+      if (isMember && !assignedTeamIds.includes(teamId)) {
+        assignedTeamIds = [...assignedTeamIds, teamId];
+      } else if (!isMember && assignedTeamIds.includes(teamId)) {
+        assignedTeamIds = assignedTeamIds.filter(id => id !== teamId);
+      }
+
+      return {
+        ...user,
+        teamId: assignedTeamIds[0] || '',
+        assignedTeamIds
+      };
+    });
+
+    this.saveUsers(updatedUsers);
     return updatedTeam;
+  }
+
+  // Course-to-Team Assignment Manager for Course Admin
+  assignCourseToTeams(courseId, teamIds = []) {
+    if (!this.isAdmin()) {
+      throw new Error("Permission Denied: Only Admins can assign courses to teams.");
+    }
+
+    const updatedTeams = this.teams.map(team => {
+      let assignedCourseIds = team.assignedCourseIds || [];
+      const shouldHaveCourse = teamIds.includes(team.id);
+
+      if (shouldHaveCourse && !assignedCourseIds.includes(courseId)) {
+        assignedCourseIds = [...assignedCourseIds, courseId];
+      } else if (!shouldHaveCourse && assignedCourseIds.includes(courseId)) {
+        assignedCourseIds = assignedCourseIds.filter(id => id !== courseId);
+      }
+
+      return { ...team, assignedCourseIds };
+    });
+
+    this.saveTeams(updatedTeams);
+    return updatedTeams;
   }
 
   deleteTeam(teamId) {

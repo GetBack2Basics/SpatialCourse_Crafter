@@ -3,6 +3,44 @@ import { authService } from '../src/services/authService.js';
 
 describe('Stage 4: Real Authentication & RBAC (coreagc@gmail.com Super Admin)', () => {
   beforeEach(() => {
+    // Reset DB state for clean tests
+    authService.users = [
+      {
+        email: 'coreagc@gmail.com',
+        name: 'George Corea (Super Admin)',
+        role: 'SUPER_ADMIN',
+        createdAt: new Date().toISOString()
+      },
+      {
+        email: 'william.dean@fungis.org',
+        name: 'William Dean (Admin)',
+        role: 'ADMIN',
+        createdAt: new Date().toISOString()
+      },
+      {
+        email: 'jordan@nsw.gov.au',
+        name: 'Jordan (Team Mango)',
+        role: 'PLAYER',
+        teamId: 'team-mango',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    authService.teams = [
+      {
+        id: 'team-mango',
+        name: 'Team Mango (NSW)',
+        members: ['jordan@nsw.gov.au', 'taylor@nsw.gov.au'],
+        assignedCourseIds: ['course-1', 'course-2']
+      },
+      {
+        id: 'team-wombat',
+        name: 'Team Wombat (QLD)',
+        members: ['sarah@qld.gov.au', 'ken@qld.gov.au'],
+        assignedCourseIds: ['course-1']
+      }
+    ];
+
     // Reset session to default super admin
     authService.signIn('coreagc@gmail.com', 'George Corea');
   });
@@ -86,5 +124,28 @@ describe('Stage 4: Real Authentication & RBAC (coreagc@gmail.com Super Admin)', 
     authService.deleteTeam(newTeam.id);
     const found = authService.teams.find(t => t.id === newTeam.id);
     expect(found).toBeUndefined();
+  });
+
+  it('should allow assigning users and teams to multiple teams and courses bi-directionally', () => {
+    authService.signIn('coreagc@gmail.com', 'George Corea');
+    
+    // Assign Jordan to multiple teams & courses
+    authService.updateUserProfile('jordan@nsw.gov.au', {
+      assignedTeamIds: ['team-mango', 'team-wombat'],
+      assignedCourseIds: ['course-fungis-2026', 'course-rathmines-legacy']
+    });
+
+    const jordan = authService.users.find(u => u.email === 'jordan@nsw.gov.au');
+    expect(jordan.assignedTeamIds).toEqual(['team-mango', 'team-wombat']);
+    expect(jordan.assignedCourseIds).toEqual(['course-fungis-2026', 'course-rathmines-legacy']);
+
+    // Check bi-directional sync in team members
+    const wombat = authService.teams.find(t => t.id === 'team-wombat');
+    expect(wombat.members).toContain('jordan@nsw.gov.au');
+
+    // Assign courses to teams via Course Admin
+    authService.assignCourseToTeams('course-sydney-spatial', ['team-mango', 'team-wombat']);
+    const mango = authService.teams.find(t => t.id === 'team-mango');
+    expect(mango.assignedCourseIds).toContain('course-sydney-spatial');
   });
 });

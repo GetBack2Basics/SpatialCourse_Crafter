@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { authService } from '../../services/authService';
-import { UserCheck, LogOut, ShieldAlert, Plus, CheckCircle2, X, Edit3, User, Mail, Users, Building, FileText } from 'lucide-react';
+import { UserCheck, LogOut, ShieldAlert, Plus, CheckCircle2, X, Edit3, User, Mail, Users, Building, FileText, MapPin } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose, currentUser }) {
   const [emailInput, setEmailInput] = useState('');
@@ -9,25 +9,34 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
+  // Available sample courses list for assignment
+  const AVAILABLE_COURSES = [
+    { id: 'course-fungis-2026', name: 'FunGIS Spatial Olympics 2026 (Lake Macquarie)' },
+    { id: 'course-rathmines-legacy', name: 'Rathmines Catalina Flying Boat Challenge' },
+    { id: 'course-sydney-spatial', name: 'Sydney Harbour Spatial Survey' }
+  ];
+
   // Super Admin Role Assign State
   const [grantEmail, setGrantEmail] = useState('');
   const [grantRole, setGrantRole] = useState('ADMIN');
 
-  // Team Create State
+  // Team Create & Edit State
   const [newTeamName, setNewTeamName] = useState('');
-  const [newTeamMembers, setNewTeamMembers] = useState('');
+  const [newTeamMemberEmails, setNewTeamMemberEmails] = useState([]);
+  const [newTeamCourseIds, setNewTeamCourseIds] = useState(['course-fungis-2026']);
 
-  // Team Edit State
   const [editingTeam, setEditingTeam] = useState(null);
   const [editTeamName, setEditTeamName] = useState('');
-  const [editTeamMembersText, setEditTeamMembersText] = useState('');
+  const [editTeamMemberEmails, setEditTeamMemberEmails] = useState([]);
+  const [editTeamCourseIds, setEditTeamCourseIds] = useState([]);
 
   // Admin User Profile Edit State
   const [editingUser, setEditingUser] = useState(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState('PLAYER');
-  const [editTeamId, setEditTeamId] = useState('');
+  const [editAssignedTeamIds, setEditAssignedTeamIds] = useState([]);
+  const [editAssignedCourseIds, setEditAssignedCourseIds] = useState([]);
   const [editOrg, setEditOrg] = useState('');
   const [editNotes, setEditNotes] = useState('');
 
@@ -84,11 +93,10 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     e.preventDefault();
     setErrorMsg(null);
     try {
-      const members = newTeamMembers.split(',').map(m => m.trim()).filter(Boolean);
-      authService.createTeam(newTeamName, members);
-      setSuccessMsg(`Created team "${newTeamName}" with ${members.length} members!`);
+      authService.createTeam(newTeamName, newTeamMemberEmails, newTeamCourseIds);
+      setSuccessMsg(`Created team "${newTeamName}" with ${newTeamMemberEmails.length} members!`);
       setNewTeamName('');
-      setNewTeamMembers('');
+      setNewTeamMemberEmails([]);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setErrorMsg(err.message);
@@ -98,7 +106,8 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
   const startEditingTeam = (team) => {
     setEditingTeam(team);
     setEditTeamName(team.name || '');
-    setEditTeamMembersText((team.members || []).join(', '));
+    setEditTeamMemberEmails(team.members || []);
+    setEditTeamCourseIds(team.assignedCourseIds || []);
   };
 
   const handleSaveTeam = (e) => {
@@ -106,10 +115,10 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     setErrorMsg(null);
     if (!editingTeam) return;
     try {
-      const members = editTeamMembersText.split(',').map(m => m.trim()).filter(Boolean);
       authService.updateTeam(editingTeam.id, {
         name: editTeamName,
-        members
+        members: editTeamMemberEmails,
+        assignedCourseIds: editTeamCourseIds
       });
       setSuccessMsg(`Updated team "${editTeamName}"!`);
       setEditingTeam(null);
@@ -135,7 +144,8 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     setEditName(user.name || '');
     setEditEmail(user.email || '');
     setEditRole(user.role || 'PLAYER');
-    setEditTeamId(user.teamId || '');
+    setEditAssignedTeamIds(user.assignedTeamIds || (user.teamId ? [user.teamId] : []));
+    setEditAssignedCourseIds(user.assignedCourseIds || []);
     setEditOrg(user.organization || '');
     setEditNotes(user.notes || '');
   };
@@ -150,7 +160,8 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
         name: editName,
         email: editEmail,
         role: editRole,
-        teamId: editTeamId,
+        assignedTeamIds: editAssignedTeamIds,
+        assignedCourseIds: editAssignedCourseIds,
         organization: editOrg,
         notes: editNotes
       });
@@ -162,18 +173,22 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     }
   };
 
+  const toggleItemInArray = (arr, item) => {
+    return arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="glass-panel p-6 max-w-xl w-full border border-sky-500/40 rounded-3xl max-h-[90vh] overflow-y-auto space-y-5 bg-slate-950 text-slate-100 shadow-2xl">
+      <div className="glass-panel p-6 max-w-2xl w-full border border-sky-500/40 rounded-3xl max-h-[92vh] overflow-y-auto space-y-5 bg-slate-950 text-slate-100 shadow-2xl">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
             <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-sky-400" />
-              <span>User Authentication & Admin Profile Manager</span>
+              <span>User Authentication, Team & Course Access Admin</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Spatial Olympics 2026 Admin User & Profile Management</p>
+            <p className="text-xs text-slate-400 mt-0.5">Configure Multi-Team & Multi-Course Assignments for Users & Groups</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 cursor-pointer">
             <X className="w-4 h-4" />
@@ -183,7 +198,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-800 text-xs font-semibold flex-wrap gap-1">
           <button
-            onClick={() => { setActiveTab('PROFILE'); setEditingUser(null); }}
+            onClick={() => { setActiveTab('PROFILE'); setEditingUser(null); setEditingTeam(null); }}
             className={`py-2 px-3 border-b-2 transition-all cursor-pointer ${
               activeTab === 'PROFILE' ? 'border-sky-400 text-sky-300 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
@@ -193,19 +208,19 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
 
           {isAdmin && (
             <button
-              onClick={() => { setActiveTab('USER_PROFILES'); setEditingUser(null); }}
+              onClick={() => { setActiveTab('USER_PROFILES'); setEditingUser(null); setEditingTeam(null); }}
               className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'USER_PROFILES' ? 'border-amber-400 text-amber-300 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               <Edit3 className="w-3.5 h-3.5" />
-              <span>Admin User Directory & Edit</span>
+              <span>User Profiles & Assignments</span>
             </button>
           )}
 
           {isSuperAdmin && (
             <button
-              onClick={() => { setActiveTab('SUPER_ADMIN'); setEditingUser(null); }}
+              onClick={() => { setActiveTab('SUPER_ADMIN'); setEditingUser(null); setEditingTeam(null); }}
               className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'SUPER_ADMIN' ? 'border-purple-400 text-purple-300 font-bold' : 'border-transparent text-purple-400/70 hover:text-purple-300'
               }`}
@@ -217,12 +232,12 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
 
           {isAdmin && (
             <button
-              onClick={() => { setActiveTab('TEAMS'); setEditingUser(null); }}
+              onClick={() => { setActiveTab('TEAMS'); setEditingUser(null); setEditingTeam(null); }}
               className={`py-2 px-3 border-b-2 transition-all cursor-pointer ${
                 activeTab === 'TEAMS' ? 'border-emerald-400 text-emerald-300 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              Team Roster Manager
+              Team & Course Manager
             </button>
           )}
         </div>
@@ -281,7 +296,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSignIn} className="space-y-3">
+              <form onSubmit={handleSignIn} className="space-y-3 font-mono">
                 <div>
                   <label className="text-xs font-bold text-slate-300 block mb-1">Email Address</label>
                   <input
@@ -344,11 +359,11 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
           <div className="space-y-4">
             {editingUser ? (
               /* Inline User Profile Editor Form for Admins */
-              <form onSubmit={handleSaveUserProfile} className="p-4 rounded-2xl bg-slate-900 border border-amber-500/40 space-y-3 font-mono">
+              <form onSubmit={handleSaveUserProfile} className="p-4 rounded-2xl bg-slate-900 border border-amber-500/40 space-y-4 font-mono">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <h4 className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
                     <Edit3 className="w-4 h-4 text-amber-400" />
-                    <span>Edit User Profile: {editingUser.email}</span>
+                    <span>Edit User Profile & Assignments: {editingUser.email}</span>
                   </h4>
                   <button
                     type="button"
@@ -405,24 +420,6 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                       <option value="ADMIN">ADMIN (Course Planner & Team Manager)</option>
                       {isSuperAdmin && <option value="SUPER_ADMIN">SUPER_ADMIN (Full Privilege)</option>}
                     </select>
-                    {!isSuperAdmin && <span className="text-[9px] text-slate-500 block mt-0.5">Role editing requires Super Admin</span>}
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] text-slate-400 block mb-1 font-semibold flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-emerald-400" />
-                      Assigned Competition Team
-                    </label>
-                    <select
-                      value={editTeamId}
-                      onChange={e => setEditTeamId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400 focus:outline-none"
-                    >
-                      <option value="">No Team Assigned</option>
-                      {authService.teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
                   </div>
 
                   <div>
@@ -438,20 +435,72 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-indigo-400 focus:outline-none"
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-[11px] text-slate-400 block mb-1 font-semibold flex items-center gap-1">
-                      <FileText className="w-3.5 h-3.5 text-slate-400" />
-                      Admin Notes / Details
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Admin notes or team role..."
-                      value={editNotes}
-                      onChange={e => setEditNotes(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-slate-400 focus:outline-none"
-                    />
+                {/* Multi-Select Teams Assignment */}
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                  <label className="text-[11px] font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                    <Users className="w-4 h-4" />
+                    <span>Assign User to Teams (Multi-Team Assignment)</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto p-1">
+                    {authService.teams.map(team => {
+                      const isChecked = editAssignedTeamIds.includes(team.id);
+                      return (
+                        <label key={team.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
+                          isChecked ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => setEditAssignedTeamIds(toggleItemInArray(editAssignedTeamIds, team.id))}
+                            className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-400"
+                          />
+                          <span className="font-bold text-[11px] truncate">{team.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
+                </div>
+
+                {/* Multi-Select Courses Assignment */}
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                  <label className="text-[11px] font-bold text-cyan-400 uppercase flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4" />
+                    <span>Assign User Directly to Courses (Multi-Course Assignment)</span>
+                  </label>
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto p-1">
+                    {AVAILABLE_COURSES.map(c => {
+                      const isChecked = editAssignedCourseIds.includes(c.id);
+                      return (
+                        <label key={c.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
+                          isChecked ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => setEditAssignedCourseIds(toggleItemInArray(editAssignedCourseIds, c.id))}
+                            className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-400"
+                          />
+                          <span className="font-bold text-[11px] truncate">{c.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1 font-semibold flex items-center gap-1">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    Admin Notes / Details
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Admin notes..."
+                    value={editNotes}
+                    onChange={e => setEditNotes(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-slate-400 focus:outline-none"
+                  />
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">
@@ -466,7 +515,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                     type="submit"
                     className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold uppercase tracking-wider cursor-pointer shadow-md"
                   >
-                    Save User Profile
+                    Save User Profile & Assignments
                   </button>
                 </div>
               </form>
@@ -479,35 +528,42 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                 </div>
 
                 <div className="space-y-2 max-h-72 overflow-y-auto">
-                  {authService.users.map(u => (
-                    <div key={u.email} className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
-                      <div>
-                        <div className="font-bold text-slate-100 text-sm">{u.name || u.email}</div>
-                        <div className="text-xs text-cyan-400">{u.email}</div>
-                        {u.organization && <div className="text-[10px] text-slate-400 mt-0.5">Org: {u.organization}</div>}
-                        {u.notes && <div className="text-[10px] text-amber-300/80 italic mt-0.5">Note: {u.notes}</div>}
-                      </div>
+                  {authService.users.map(u => {
+                    const userTeams = authService.teams.filter(t => (t.members || []).some(m => m.toLowerCase() === u.email.toLowerCase()));
+                    return (
+                      <div key={u.email} className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="font-bold text-slate-100 text-sm">{u.name || u.email}</div>
+                          <div className="text-xs text-cyan-400">{u.email}</div>
+                          {userTeams.length > 0 && (
+                            <div className="text-[10px] text-emerald-400 mt-0.5">
+                              Teams: {userTeams.map(t => t.name).join(', ')}
+                            </div>
+                          )}
+                          {u.organization && <div className="text-[10px] text-slate-400 mt-0.5">Org: {u.organization}</div>}
+                        </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          u.email.toLowerCase() === 'coreagc@gmail.com' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                          u.role === 'ADMIN' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-950 text-slate-400 border border-slate-800'
-                        }`}>
-                          {u.role}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            u.email.toLowerCase() === 'coreagc@gmail.com' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                            u.role === 'ADMIN' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-950 text-slate-400 border border-slate-800'
+                          }`}>
+                            {u.role}
+                          </span>
 
-                        <button
-                          type="button"
-                          onClick={() => startEditingUser(u)}
-                          className="p-1.5 rounded-lg bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Edit User Profile, Email, and Details"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => startEditingUser(u)}
+                            className="p-1.5 rounded-lg bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Edit User Profile, Email, and Team/Course Assignments"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Profile</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -522,8 +578,8 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
               <span>Only coreagc@gmail.com can grant or revoke Admin roles across the Spatial Olympics platform.</span>
             </div>
 
-            <form onSubmit={handleGrantRole} className="space-y-3">
-              <h4 className="text-xs font-bold text-slate-200 uppercase font-mono">Assign Admin Role to User</h4>
+            <form onSubmit={handleGrantRole} className="space-y-3 font-mono">
+              <h4 className="text-xs font-bold text-slate-200 uppercase">Assign Admin Role to User</h4>
               <div>
                 <label className="text-[11px] text-slate-400 block mb-1">User Email Address</label>
                 <input
@@ -555,45 +611,16 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                 Grant Role Authorization
               </button>
             </form>
-
-            <div className="space-y-2 font-mono text-xs">
-              <h4 className="font-bold text-slate-300 uppercase">Registered Users Directory</h4>
-              <div className="space-y-1 max-h-36 overflow-y-auto">
-                {authService.users.map(u => (
-                  <div key={u.email} className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold block text-slate-200">{u.name || u.email}</span>
-                      <span className="text-[10px] text-slate-400">{u.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        u.email.toLowerCase() === 'coreagc@gmail.com' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                        u.role === 'ADMIN' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-950 text-slate-400 border border-slate-800'
-                      }`}>
-                        {u.role}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => { setActiveTab('USER_PROFILES'); startEditingUser(u); }}
-                        className="px-2 py-0.5 rounded bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800 text-[10px] font-bold"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Tab 4: Team Roster Manager */}
+        {/* Tab 4: Team Roster & Course Assignment Manager */}
         {activeTab === 'TEAMS' && isAdmin && (
-          <div className="space-y-4">
+          <div className="space-y-4 font-mono">
             {editingTeam ? (
-              <form onSubmit={handleSaveTeam} className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/40 space-y-3 font-mono">
+              <form onSubmit={handleSaveTeam} className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                  <h4 className="text-xs font-bold text-emerald-300 uppercase">Edit Team: {editingTeam.name}</h4>
+                  <h4 className="text-xs font-bold text-emerald-300 uppercase">Edit Team & Course Assignments: {editingTeam.name}</h4>
                   <button
                     type="button"
                     onClick={() => setEditingTeam(null)}
@@ -604,7 +631,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Team Name</label>
+                  <label className="text-[11px] text-slate-400 block mb-1 font-bold">Team Name</label>
                   <input
                     type="text"
                     required
@@ -614,14 +641,59 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Member Email Addresses (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={editTeamMembersText}
-                    onChange={e => setEditTeamMembersText(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400"
-                  />
+                {/* Dropdown Checklist of Registered Users */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-slate-300 font-bold block">
+                    Select Team Members (From Registered Users Directory)
+                  </label>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-36 overflow-y-auto space-y-1.5">
+                    {authService.users.map(u => {
+                      const isChecked = editTeamMemberEmails.some(m => m.toLowerCase() === u.email.toLowerCase());
+                      return (
+                        <label key={u.email} className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                          isChecked ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}>
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => setEditTeamMemberEmails(toggleItemInArray(editTeamMemberEmails, u.email))}
+                              className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-400"
+                            />
+                            <span className="font-bold text-xs">{u.name || u.email}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono shrink-0">{u.email}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Multi-Select Course Checklist for Team */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-slate-300 font-bold block">
+                    Assign Team to Challenges / Courses
+                  </label>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1.5">
+                    {AVAILABLE_COURSES.map(c => {
+                      const isChecked = editTeamCourseIds.includes(c.id);
+                      return (
+                        <label key={c.id} className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                          isChecked ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}>
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => setEditTeamCourseIds(toggleItemInArray(editTeamCourseIds, c.id))}
+                              className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-400"
+                            />
+                            <span className="font-bold text-xs">{c.name}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-1">
@@ -636,12 +708,12 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                     type="submit"
                     className="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold uppercase tracking-wider"
                   >
-                    Save Team
+                    Save Team & Assignments
                   </button>
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleCreateTeam} className="space-y-3 font-mono">
+              <form onSubmit={handleCreateTeam} className="space-y-4">
                 <h4 className="text-xs font-bold text-slate-200 uppercase">Create New Competition Team</h4>
                 
                 <div>
@@ -656,15 +728,32 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Member Email Addresses (Comma separated)</label>
-                  <input
-                    type="text"
-                    placeholder="alex@vic.gov.au, mina@vic.gov.au"
-                    value={newTeamMembers}
-                    onChange={e => setNewTeamMembers(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100"
-                  />
+                {/* Dropdown Checklist of Registered Users */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-slate-300 font-bold block">
+                    Select Members (Dropdown Checklist of Registered Users)
+                  </label>
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 max-h-36 overflow-y-auto space-y-1.5">
+                    {authService.users.map(u => {
+                      const isChecked = newTeamMemberEmails.includes(u.email);
+                      return (
+                        <label key={u.email} className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                          isChecked ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}>
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => setNewTeamMemberEmails(toggleItemInArray(newTeamMemberEmails, u.email))}
+                              className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-400"
+                            />
+                            <span className="font-bold text-xs">{u.name || u.email}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono shrink-0">{u.email}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <button
@@ -681,9 +770,9 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
               <h4 className="font-bold text-slate-300 uppercase">Active Teams Roster</h4>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {authService.teams.map(t => (
-                  <div key={t.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <div key={t.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
                     <div className="flex items-center justify-between font-bold text-emerald-300">
-                      <span>{t.name}</span>
+                      <span className="text-sm">{t.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400">{t.members.length} Members</span>
                         <button
@@ -702,7 +791,10 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                         </button>
                       </div>
                     </div>
-                    <div className="text-[10px] text-slate-400">Members: {t.members.join(', ') || 'No members assigned'}</div>
+                    <div className="text-[10px] text-slate-300">Members: {t.members.join(', ') || 'No members assigned'}</div>
+                    {t.assignedCourseIds && t.assignedCourseIds.length > 0 && (
+                      <div className="text-[10px] text-cyan-400">Assigned Courses: {t.assignedCourseIds.join(', ')}</div>
+                    )}
                   </div>
                 ))}
               </div>

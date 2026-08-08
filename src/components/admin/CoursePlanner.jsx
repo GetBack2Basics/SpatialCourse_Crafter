@@ -888,6 +888,42 @@ export default function CoursePlanner({
                   </div>
                 </div>
 
+                {/* Course Assigned Teams Selector */}
+                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-slate-900/80 space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-base">groups</span>
+                      <span>Assigned Competition Teams for Course</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-normal">Check teams allowed to compete</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                    {authService.teams.map(team => {
+                      const isAssigned = (team.assignedCourseIds || []).includes(course.id);
+                      return (
+                        <label key={team.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
+                          isAssigned ? 'bg-emerald-950/80 border-emerald-500 text-emerald-200' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={isAssigned}
+                            onChange={() => {
+                              const currentTeams = authService.teams.filter(t => (t.assignedCourseIds || []).includes(course.id)).map(t => t.id);
+                              const updatedTeamIds = isAssigned 
+                                ? currentTeams.filter(id => id !== team.id)
+                                : [...currentTeams, team.id];
+                              authService.assignCourseToTeams(course.id, updatedTeamIds);
+                              showToast(`Updated assigned teams for course "${course.title}"!`);
+                            }}
+                            className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-400"
+                          />
+                          <span className="font-bold text-[11px] truncate">{team.name} ({team.members?.length || 0} members)</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Collapsible Coordinate Parser & Location Selector Drawer */}
                 <div className="rounded-xl border border-primary/20 bg-primary-container/5 overflow-hidden transition-all">
                   <button
