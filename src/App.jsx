@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/common/Header';
+import Footer from './components/common/Footer';
 import CoursePlanner from './components/admin/CoursePlanner';
 import ClueRunner from './components/player/ClueRunner';
 import Leaderboard from './components/scoring/Leaderboard';
@@ -8,6 +9,7 @@ import TerminalLogs from './components/common/TerminalLogs';
 import { PRESET_COURSES } from './data/initialCourse';
 import { wsService } from './services/websocketService';
 import { teamMergeService } from './services/teamMergeService';
+import { themeService } from './services/themeService';
 
 import AuthModal from './components/common/AuthModal';
 import { authService } from './services/authService';
@@ -59,6 +61,9 @@ export default function App() {
   const activeTeam = { id: 'team-mango', name: 'Team Mango (NSW)', members: [currentUser?.email || 'Jordan', 'Taylor'] };
 
   useEffect(() => {
+    // Apply initial theme from themeService
+    themeService.applyTheme();
+
     // Connect to WebSocket server on mount
     wsService.connect('ws://localhost:8080/ws');
 
@@ -131,7 +136,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-body-md relative overflow-x-hidden">
+    <div className="min-h-screen bg-theme-surface text-theme-main transition-colors duration-300 font-body-md relative overflow-x-hidden">
       {/* Header Bar */}
       <Header
         activeTab={activeTab}
@@ -177,6 +182,9 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Auth & RBAC Modal */}
       <AuthModal

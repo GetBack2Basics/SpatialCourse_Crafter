@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ThemeSwitcher from './ThemeSwitcher';
 
 export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, activeTeam, currentUser, onOpenAuthModal }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -13,42 +14,41 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
 
   return (
     <>
-      <header className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl shadow-lg border-b border-slate-800/80 text-slate-100">
+      <header className="fixed top-0 w-full z-50 bg-theme-surface/90 backdrop-blur-xl shadow-lg border-b border-theme text-theme-main transition-colors duration-300">
         <div className="h-16 max-w-[1440px] mx-auto px-margin-mobile lg:px-margin-desktop flex items-center justify-between">
           
           {/* Logo & Title */}
           <div className="flex items-center gap-base cursor-pointer" onClick={() => handleTabChange('ADMIN')}>
-            <span className="material-symbols-outlined text-primary text-[32px]">forest</span>
-            <span className="font-headline-md text-headline-md text-primary tracking-tight">
-              SpatialCourse <span className="font-normal opacity-70 text-slate-300">Crafter</span>
+            <span className="material-symbols-outlined text-theme-primary text-[32px]">forest</span>
+            <span className="font-headline-md text-headline-md text-theme-primary tracking-tight">
+              SpatialCourse <span className="font-normal opacity-70 text-theme-main">Crafter</span>
             </span>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-gutter">
+          <nav className="hidden lg:flex items-center gap-5">
             <button
               onClick={() => handleTabChange('ADMIN')}
               className={`transition-colors uppercase text-label-md ${
-                activeTab === 'ADMIN' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'
+                activeTab === 'ADMIN' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
               }`}
             >
-              Admin Planner
+              Planner
             </button>
 
             <button
               onClick={() => handleTabChange('PLAYER')}
               className={`transition-colors uppercase text-label-md flex items-center gap-1.5 ${
-                activeTab === 'PLAYER' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'
+                activeTab === 'PLAYER' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
               }`}
             >
-              <span>Mobile Clue Runner</span>
-              <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">FIELD</span>
+              <span>Clue Runner</span>
             </button>
 
             <button
               onClick={() => handleTabChange('SCORING')}
               className={`transition-colors uppercase text-label-md ${
-                activeTab === 'SCORING' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'
+                activeTab === 'SCORING' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
               }`}
             >
               Leaderboard
@@ -56,42 +56,42 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
 
             <button
               onClick={toggleLogs}
-              className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors uppercase flex items-center gap-1.5"
+              className="font-label-md text-label-md text-theme-sub hover:text-theme-primary transition-colors uppercase flex items-center gap-1.5"
             >
-              <span>WS Logs</span>
-              <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-mono text-[10px]">
+              <span>Logs</span>
+              <span className="bg-theme-primary/20 text-theme-primary px-2 py-0.5 rounded font-mono text-[10px]">
                 {logCount}
               </span>
             </button>
 
+            {/* Themes Switcher */}
+            <div className="flex items-center gap-1.5">
+              <ThemeSwitcher />
+            </div>
+
+            {/* User Profile (Initials Avatar Only) */}
             <div
               onClick={onOpenAuthModal}
-              className="ml-4 border-l border-outline-variant pl-4 flex items-center gap-2 cursor-pointer group"
-              title="Click to manage account auth & team roles"
+              className="ml-2 border-l border-theme pl-4 flex items-center cursor-pointer group hover:opacity-90 transition-all"
+              title={`Click to manage account auth (${currentUser?.name || 'George Corea'})`}
             >
-              <img
-                alt="Profile"
-                className="w-8 h-8 rounded-full object-cover border border-outline-variant group-hover:ring-2 group-hover:ring-primary transition-all"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBliQnnmsuu7aUUcnZ6koWP0IsPKO0poQ74gKymoXyA8qMQjgpzV1mGDLG__TTjLR9bjbfunm_OdsYB4YsG3EeYQknYubmpJ4x-gQVxoC5zt6i22YkF90jAUnorFp7f5PM315MNcl6YQ0k5kgpKIFbBs2sWGI8s55RPnpEUc-P4tlDUMtPARPo4uHXvUUh-wDGCGGoeZB7hgmDrC4IJjClCi7DOQQGBFeHsEV_DrdYJjE1S2wTUkq3S"
-              />
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-bold text-primary">{currentUser?.name || 'George Corea'}</span>
-                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded w-fit ${
-                  isSuperAdmin ? 'bg-purple-900/60 text-purple-300 border border-purple-700' :
-                  isAdmin ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' :
-                  'bg-sky-900/60 text-sky-300 border border-sky-700'
-                }`}>
-                  {isSuperAdmin ? 'SUPER ADMIN' : isAdmin ? 'ADMIN' : 'PLAYER'}
-                </span>
+              <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary border border-theme flex items-center justify-center font-bold text-xs group-hover:ring-2 group-hover:ring-theme-primary transition-all select-none">
+                {(currentUser?.name || 'George Corea')
+                  .split(' ')
+                  .map(part => part[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2)}
               </div>
             </div>
           </nav>
 
           {/* Mobile Header Controls */}
           <div className="lg:hidden flex items-center gap-2">
+            <ThemeSwitcher compact={true} />
             <button
               onClick={toggleLogs}
-              className="p-2 rounded-full bg-surface-container border border-border-subtle text-primary"
+              className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary"
               title="WebSocket Logs"
             >
               <span className="material-symbols-outlined text-[20px]">terminal</span>
@@ -99,7 +99,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg bg-primary-container text-on-primary-container font-bold flex items-center gap-1"
+              className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary font-bold flex items-center gap-1"
               aria-label="Toggle mobile menu"
             >
               <span className="material-symbols-outlined text-[24px]">

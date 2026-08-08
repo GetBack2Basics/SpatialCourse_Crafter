@@ -4,7 +4,153 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar from Stitch code.html */
+/* ==========================================================================
+   FUNGIS GeoScore AI Unified Theme System - CSS Custom Properties
+   ========================================================================== */
+
+:root, :root[data-theme="field"] {
+  /* 1. High-Contrast Dark Mode ("Field") - Outdoor GIS Data Collection */
+  --theme-surface: #031427;
+  --theme-surface-container: #0b1c30;
+  --theme-surface-container-high: #132742;
+  --theme-primary: #00F2FF;
+  --theme-primary-container: rgba(0, 242, 255, 0.15);
+  --theme-secondary: #FFB700;
+  --theme-secondary-container: rgba(255, 183, 0, 0.15);
+  --theme-success: #00FF9D;
+  --theme-success-container: rgba(0, 255, 157, 0.15);
+  --theme-text-primary: #FFFFFF;
+  --theme-text-secondary: #94A3B8;
+  --theme-border: rgba(0, 242, 255, 0.2);
+  --theme-header-bg: rgba(3, 20, 39, 0.85);
+  --theme-card-bg: #0b1c30;
+  --theme-shadow: 0 10px 25px -5px rgba(0, 242, 255, 0.1);
+  --theme-font-weight-headline: 600;
+  --theme-font-weight-body: 400;
+  --theme-radius: 8px; /* ROUND_FOUR */
+}
+
+:root[data-theme="studio"] {
+  /* 2. High-Fidelity Light Mode ("Studio") - Office / Administrative Planning */
+  --theme-surface: #F8F9FF;
+  --theme-surface-container: #EFF4FF;
+  --theme-surface-container-high: #E2ECFF;
+  --theme-primary: #1B365D;
+  --theme-primary-container: rgba(27, 54, 93, 0.12);
+  --theme-secondary: #D97706;
+  --theme-secondary-container: rgba(217, 119, 6, 0.12);
+  --theme-success: #059669;
+  --theme-success-container: rgba(5, 150, 105, 0.12);
+  --theme-text-primary: #0F172A;
+  --theme-text-secondary: #475569;
+  --theme-border: rgba(27, 54, 93, 0.15);
+  --theme-header-bg: rgba(248, 249, 255, 0.9);
+  --theme-card-bg: #ffffff;
+  --theme-shadow: 0 10px 25px -5px rgba(27, 54, 93, 0.08);
+  --theme-font-weight-headline: 600;
+  --theme-font-weight-body: 400;
+  --theme-radius: 8px; /* ROUND_FOUR */
+}
+
+:root[data-theme="high-contrast"] {
+  /* 3. High Contrast Mode - Accessibility Optimized (fungis.org branding) */
+  --theme-surface: #101501;
+  --theme-surface-container: #182203;
+  --theme-surface-container-high: #233105;
+  --theme-primary: #C2EF73;
+  --theme-primary-container: rgba(194, 239, 115, 0.2);
+  --theme-secondary: #E2FF80;
+  --theme-secondary-container: rgba(226, 255, 128, 0.2);
+  --theme-success: #00FF9D;
+  --theme-success-container: rgba(0, 255, 157, 0.2);
+  --theme-text-primary: #FFFFFF;
+  --theme-text-secondary: #C2EF73;
+  --theme-border: rgba(194, 239, 115, 0.35);
+  --theme-header-bg: rgba(16, 21, 1, 0.92);
+  --theme-card-bg: #182203;
+  --theme-shadow: 0 0 15px rgba(194, 239, 115, 0.15);
+  --theme-font-weight-headline: 700;
+  --theme-font-weight-body: 500;
+  --theme-radius: 8px; /* ROUND_FOUR */
+}
+
+/* Apply Root Variables to Body */
+body {
+  background-color: var(--theme-surface);
+  color: var(--theme-text-primary);
+  font-family: 'Montserrat', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* High Contrast Heavy-Weight Typography Rule */
+[data-theme="high-contrast"] body,
+[data-theme="high-contrast"] button,
+[data-theme="high-contrast"] input,
+[data-theme="high-contrast"] select,
+[data-theme="high-contrast"] h1,
+[data-theme="high-contrast"] h2,
+[data-theme="high-contrast"] h3 {
+  font-weight: 700 !important;
+}
+
+/* ROUND_FOUR (8px Radius) Utility */
+.round-four, .rounded-round-four {
+  border-radius: var(--theme-radius, 8px) !important;
+}
+
+/* Unified Theme Token Classes */
+.bg-theme-surface {
+  background-color: var(--theme-surface);
+}
+
+.bg-theme-container {
+  background-color: var(--theme-surface-container);
+}
+
+.bg-theme-container-high {
+  background-color: var(--theme-surface-container-high);
+}
+
+.text-theme-primary {
+  color: var(--theme-primary);
+}
+
+.text-theme-main {
+  color: var(--theme-text-primary);
+}
+
+.text-theme-sub {
+  color: var(--theme-text-secondary);
+}
+
+.text-theme-secondary {
+  color: var(--theme-secondary);
+}
+
+.text-theme-success {
+  color: var(--theme-success);
+}
+
+.border-theme {
+  border-color: var(--theme-border);
+}
+
+/* Glassmorphic Widget Blur Effect */
+.glass-widget {
+  background: var(--theme-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--theme-border);
+  box-shadow: var(--theme-shadow);
+  border-radius: var(--theme-radius, 8px);
+}
+
+/* Data Display Telemetry (JetBrains Mono) */
+.font-telemetry, .font-mono-telemetry {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -12,7 +158,7 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: var(--color-surface-dim, #d7dadf);
+  background-color: var(--theme-border);
   border-radius: 10px;
 }
 
@@ -32,29 +178,29 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* MapLibre GL JS Dark Theme Popup Overrides */
+/* Dynamic MapLibre GL JS Popup Overrides */
 .maplibregl-popup-content {
-  background: #020617 !important;
-  color: #f8fafc !important;
-  border: 1px solid rgba(56, 189, 248, 0.5) !important;
-  border-radius: 1rem !important;
+  background: var(--theme-surface-container) !important;
+  color: var(--theme-text-primary) !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: var(--theme-radius, 8px) !important;
   padding: 12px 14px !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: var(--theme-shadow) !important;
 }
 
 .maplibregl-popup-tip {
-  border-top-color: #020617 !important;
-  border-bottom-color: #020617 !important;
+  border-top-color: var(--theme-surface-container) !important;
+  border-bottom-color: var(--theme-surface-container) !important;
 }
 
 .maplibregl-popup-close-button {
-  color: #38bdf8 !important;
+  color: var(--theme-primary) !important;
   font-size: 18px !important;
   padding: 4px 8px !important;
 }
 
 .maplibregl-popup-close-button:hover {
-  color: #38bdf8 !important;
-  background: rgba(56, 189, 248, 0.1) !important;
+  color: var(--theme-primary) !important;
+  background: var(--theme-primary-container) !important;
   border-radius: 9999px !important;
 }
