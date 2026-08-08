@@ -92,7 +92,7 @@ export default function CoursePlanner({
     setShowSuggestions(false);
   }, [course]);
 
-  // Real-time location search & autofill biased to user's region/state/country
+  // Real-time location search & autofill strictly biased to user's region/state/country first
   useEffect(() => {
     if (!startName || startName.trim().length < 3) {
       setLocationSuggestions([]);
@@ -100,27 +100,36 @@ export default function CoursePlanner({
     }
 
     const timer = setTimeout(async () => {
-      try {
-        const lat = parseFloat(startLat) || -33.0372;
-        const lng = parseFloat(startLng) || 151.5945;
-        const xmin = (lng - 2.5).toFixed(4);
-        const ymin = (lat - 2.5).toFixed(4);
-        const xmax = (lng + 2.5).toFixed(4);
-        const ymax = (lat + 2.5).toFixed(4);
-        const viewboxParam = `&viewbox=${xmin},${ymin},${xmax},${ymax}&bounded=0`;
+      const centerLat = parseFloat(startLat) || -33.0372;
+      const centerLng = parseFloat(startLng) || 151.5945;
+      
+      // Nominatim viewbox format: <left>,<top>,<right>,<bottom> (xmin, ymax, xmax, ymin)
+      const xmin = (centerLng - 3.0).toFixed(4);
+      const ymax = (centerLat + 3.0).toFixed(4);
+      const xmax = (centerLng + 3.0).toFixed(4);
+      const ymin = (centerLat - 3.0).toFixed(4);
+      const viewboxStr = `${xmin},${ymax},${xmax},${ymin}`;
 
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(startName)}${viewboxParam}&limit=5`);
-        if (res.ok) {
-          const data = await res.json();
-          const formatted = data.map(item => ({
-            display_name: item.display_name,
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-            state: item.address?.state || item.address?.region || '',
-            country: item.address?.country || ''
-          }));
-          setLocationSuggestions(formatted);
+      try {
+        // Stage 1: Try bounded=1 local regional search first
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(startName)}&viewbox=${viewboxStr}&bounded=1&limit=5`);
+        let data = [];
+        if (res.ok) data = await res.json();
+
+        // Stage 2: If no results in local region, fallback to bounded=0
+        if (!data || data.length === 0) {
+          res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(startName)}&viewbox=${viewboxStr}&bounded=0&limit=5`);
+          if (res.ok) data = await res.json();
         }
+
+        const formatted = data.map(item => ({
+          display_name: item.display_name,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+          state: item.address?.state || item.address?.region || '',
+          country: item.address?.country || ''
+        }));
+        setLocationSuggestions(formatted);
       } catch (e) {
         console.warn("Geocoding lookup notice:", e);
       }
@@ -129,7 +138,7 @@ export default function CoursePlanner({
     return () => clearTimeout(timer);
   }, [startName, startLat, startLng]);
 
-  // Real-time location search & autofill biased to user's region/state/country
+  // Real-time location search & autofill strictly biased to user's region/state/country first
   useEffect(() => {
     if (!finishName || finishName.trim().length < 3) {
       setFinishLocationSuggestions([]);
@@ -137,27 +146,36 @@ export default function CoursePlanner({
     }
 
     const timer = setTimeout(async () => {
-      try {
-        const lat = parseFloat(startLat) || -33.0372;
-        const lng = parseFloat(startLng) || 151.5945;
-        const xmin = (lng - 2.5).toFixed(4);
-        const ymin = (lat - 2.5).toFixed(4);
-        const xmax = (lng + 2.5).toFixed(4);
-        const ymax = (lat + 2.5).toFixed(4);
-        const viewboxParam = `&viewbox=${xmin},${ymin},${xmax},${ymax}&bounded=0`;
+      const centerLat = parseFloat(startLat) || -33.0372;
+      const centerLng = parseFloat(startLng) || 151.5945;
 
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(finishName)}${viewboxParam}&limit=5`);
-        if (res.ok) {
-          const data = await res.json();
-          const formatted = data.map(item => ({
-            display_name: item.display_name,
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-            state: item.address?.state || item.address?.region || '',
-            country: item.address?.country || ''
-          }));
-          setFinishLocationSuggestions(formatted);
+      // Nominatim viewbox format: <left>,<top>,<right>,<bottom> (xmin, ymax, xmax, ymin)
+      const xmin = (centerLng - 3.0).toFixed(4);
+      const ymax = (centerLat + 3.0).toFixed(4);
+      const xmax = (centerLng + 3.0).toFixed(4);
+      const ymin = (centerLat - 3.0).toFixed(4);
+      const viewboxStr = `${xmin},${ymax},${xmax},${ymin}`;
+
+      try {
+        // Stage 1: Try bounded=1 local regional search first
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(finishName)}&viewbox=${viewboxStr}&bounded=1&limit=5`);
+        let data = [];
+        if (res.ok) data = await res.json();
+
+        // Stage 2: If no results in local region, fallback to bounded=0
+        if (!data || data.length === 0) {
+          res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(finishName)}&viewbox=${viewboxStr}&bounded=0&limit=5`);
+          if (res.ok) data = await res.json();
         }
+
+        const formatted = data.map(item => ({
+          display_name: item.display_name,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+          state: item.address?.state || item.address?.region || '',
+          country: item.address?.country || ''
+        }));
+        setFinishLocationSuggestions(formatted);
       } catch (e) {
         console.warn("Finish geocoding lookup notice:", e);
       }
