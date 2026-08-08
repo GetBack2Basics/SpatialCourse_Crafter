@@ -102,4 +102,17 @@ export async function parsePhotoExif(file) {
   return null;
 }
 
-
+/**
+ * Converts zero-based or one-based index/number to lowercase letter label ('a', 'b', 'c' ... 'z', 'aa', 'ab'...)
+ */
+export function getWaypointLabel(index) {
+  const num = typeof index === 'number' ? index : (parseInt(index, 10) - 1 || 0);
+  const idx = num < 0 ? 0 : num;
+  
+  if (idx < 26) {
+    return String.fromCharCode(97 + idx);
+  }
+  const first = String.fromCharCode(97 + Math.floor(idx / 26) - 1);
+  const second = String.fromCharCode(97 + (idx % 26));
+  return `${first}${second}`;
+}

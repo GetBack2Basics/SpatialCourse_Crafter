@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import MapLibreView from '../map/MapLibreView';
 import { wsService } from '../../services/websocketService';
-import { calculateHaversineDistance, parseCoordinates } from '../../utils/geoUtils';
+import { calculateHaversineDistance, parseCoordinates, getWaypointLabel } from '../../utils/geoUtils';
 
 export default function CoursePlanner({
   course,
@@ -36,6 +36,41 @@ export default function CoursePlanner({
   // Finish location autocomplete state
   const [finishLocationSuggestions, setFinishLocationSuggestions] = useState([]);
   const [showFinishSuggestions, setShowFinishSuggestions] = useState(false);
+
+  // Active clue selection state for map zoom sync
+  const [activeClueId, setActiveClueId] = useState(course.clues[0]?.id || null);
+
+  // Movable & Collapsible Spatial Analysis Overlay Card State
+  const [isAnalysisCollapsed, setIsAnalysisCollapsed] = useState(false);
+  const [cardPos, setCardPos] = useState({ x: 24, y: 24 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const posStartRef = useRef({ x: 24, y: 24 });
+
+  const handleAnalysisMouseDown = (e) => {
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    posStartRef.current = { ...cardPos };
+
+    const handleMouseMove = (ev) => {
+      if (!isDraggingRef.current) return;
+      const dx = ev.clientX - dragStartRef.current.x;
+      const dy = ev.clientY - dragStartRef.current.y;
+      setCardPos({
+        x: Math.max(10, posStartRef.current.x + dx),
+        y: Math.max(10, posStartRef.current.y + dy)
+      });
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   // Editing clue modal state
   const [editingClue, setEditingClue] = useState(null);
@@ -747,19 +782,31 @@ export default function CoursePlanner({
 
               {/* Waypoint Cards List with Move Up, Move Down, Edit & Delete */}
               <div className="space-y-4">
-                {course.clues.map((clue, idx) => (
-                  <div key={clue.id} className="bg-surface-container-lowest p-5 rounded-xl border-l-4 border-l-primary shadow-sm group hover:shadow-md transition-shadow relative">
-                    <div className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-sm font-bold shadow-sm">
-                      {clue.number}
-                    </div>
+                {course.clues.map((clue, idx) => {
+                  const label = getWaypointLabel(idx);
+                  const isActive = clue.id === activeClueId;
 
-                    <div className="flex justify-between items-start mb-2 pl-2">
-                      <div>
-                        <h4 className="font-label-md text-label-md text-on-surface flex items-center gap-2">
-                          <span>{clue.title}</span>
-                          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{clue.category}</span>
-                        </h4>
+                  return (
+                    <div
+                      key={clue.id}
+                      onClick={() => setActiveClueId(clue.id)}
+                      className={`p-5 rounded-xl border-l-4 shadow-sm group hover:shadow-md transition-all relative cursor-pointer ${
+                        isActive
+                          ? 'bg-primary/10 border-l-primary border border-primary/30 ring-2 ring-primary/20'
+                          : 'bg-surface-container-lowest border-l-primary border border-border-subtle'
+                      }`}
+                    >
+                      <div className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-mono font-bold text-xs shadow-sm uppercase">
+                        {label}
                       </div>
+
+                      <div className="flex justify-between items-start mb-2 pl-2">
+                        <div>
+                          <h4 className="font-label-md text-label-md text-on-surface flex items-center gap-2">
+                            <span>Waypoint {label}: {clue.title}</span>
+                            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{clue.category}</span>
+                          </h4>
+                        </div>
 
                       {/* Waypoint Action Controls: Move Up, Move Down, Edit, Delete */}
                       <div className="flex items-center gap-1">
@@ -825,7 +872,8 @@ export default function CoursePlanner({
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -849,61 +897,71 @@ export default function CoursePlanner({
               lng: parseFloat(finishLng) || course.finishLocation?.lng || 151.5960
             }}
             clues={course.clues}
+            activeClueId={activeClueId}
+            onSelectClue={setActiveClueId}
             onUpdateStartLocation={handleUpdateStartLocation}
             onUpdateFinishLocation={handleUpdateFinishLocation}
             onUpdateClueLocation={handleUpdateClueLocation}
           />
 
-          {/* Floating Map Controls */}
-          <div className="absolute top-6 right-6 flex flex-col gap-2 z-20">
-            <div className="bg-surface-container-lowest rounded-xl shadow-md p-1 flex flex-col">
-              <button className="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary rounded-lg transition-colors">
-                <span className="material-symbols-outlined">add</span>
-              </button>
-              <div className="w-6 h-px bg-border-subtle mx-auto my-1"></div>
-              <button className="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary rounded-lg transition-colors">
-                <span className="material-symbols-outlined">remove</span>
+          {/* Movable & Collapsible Spatial Analysis Card Overlaying Map */}
+          <div
+            style={{ left: `${cardPos.x}px`, top: `${cardPos.y}px` }}
+            className="absolute lg:w-96 bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-primary/30 z-20 transition-all select-none"
+          >
+            <div
+              onMouseDown={handleAnalysisMouseDown}
+              className="flex items-center justify-between cursor-move pb-2 border-b border-border-subtle/50"
+              title="Click and drag to move Spatial Analysis panel"
+            >
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">drag_indicator</span>
+                <span className="font-label-md text-xs font-bold text-on-surface uppercase tracking-wider">Spatial Analysis</span>
+                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-mono text-[10px]">LIVE</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAnalysisCollapsed(!isAnalysisCollapsed)}
+                className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors cursor-pointer"
+                title={isAnalysisCollapsed ? "Expand Panel" : "Collapse Panel"}
+              >
+                <span className="material-symbols-outlined text-base">
+                  {isAnalysisCollapsed ? 'unfold_more' : 'unfold_less'}
+                </span>
               </button>
             </div>
-            <button className="w-12 h-12 bg-surface-container-lowest rounded-full shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary transition-colors mt-2">
-              <span className="material-symbols-outlined">my_location</span>
-            </button>
-            <button className="w-12 h-12 bg-surface-container-lowest rounded-full shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container hover:text-primary transition-colors">
-              <span className="material-symbols-outlined">layers</span>
-            </button>
-          </div>
 
-          {/* Dynamic Spatial Analysis Card Overlaying Map */}
-          <div className="absolute bottom-6 left-6 right-6 lg:right-auto lg:w-96 bg-surface/90 backdrop-blur-md rounded-xl p-4 shadow-xl border border-border-subtle z-20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-label-md text-label-md text-on-surface uppercase tracking-wider">Spatial Analysis</span>
-              <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-mono text-[10px]">LIVE</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-body-sm">
-                <span className="text-text-secondary">Start Location</span>
-                <span className="font-mono text-on-surface text-xs font-bold truncate max-w-[200px]" title={startName}>{startName}</span>
+            {!isAnalysisCollapsed && (
+              <div className="space-y-2 mt-3">
+                <div className="flex justify-between items-center text-body-sm">
+                  <span className="text-text-secondary">Start Location</span>
+                  <span className="font-mono text-on-surface text-xs font-bold truncate max-w-[200px]" title={startName}>{startName}</span>
+                </div>
+                <div className="flex justify-between items-center text-body-sm">
+                  <span className="text-text-secondary">Start Lat/Lng</span>
+                  <span className="font-mono text-on-surface text-xs font-bold">{parseFloat(startLat).toFixed(4)}°, {parseFloat(startLng).toFixed(4)}°</span>
+                </div>
+                <div className="flex justify-between items-center text-body-sm">
+                  <span className="text-text-secondary">Finish Location</span>
+                  <span className="font-mono text-rose-400 text-xs font-bold truncate max-w-[200px]" title={finishName}>{finishName}</span>
+                </div>
+                <div className="flex justify-between items-center text-body-sm">
+                  <span className="text-text-secondary">Activation Radius</span>
+                  <span className="font-mono text-primary font-bold">{activationRadius} meters</span>
+                </div>
+                <div className="flex justify-between items-center text-body-sm">
+                  <span className="text-text-secondary">Total Distance</span>
+                  <span className="font-mono text-on-surface font-bold">{courseMetrics.totalDistanceKm}</span>
+                </div>
+                <div className="flex justify-between items-center text-body-sm">
+                  <span className="text-text-secondary">Est. Completion</span>
+                  <span className="font-mono text-on-surface font-bold">{courseMetrics.estTime}</span>
+                </div>
+                <div className="w-full h-1.5 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-primary rounded-full w-[100%]"></div>
+                </div>
               </div>
-              <div className="flex justify-between items-center text-body-sm">
-                <span className="text-text-secondary">Start Lat/Lng</span>
-                <span className="font-mono text-on-surface text-xs font-bold">{parseFloat(startLat).toFixed(4)}°, {parseFloat(startLng).toFixed(4)}°</span>
-              </div>
-              <div className="flex justify-between items-center text-body-sm">
-                <span className="text-text-secondary">Activation Radius</span>
-                <span className="font-mono text-primary font-bold">{activationRadius} meters</span>
-              </div>
-              <div className="flex justify-between items-center text-body-sm">
-                <span className="text-text-secondary">Total Distance</span>
-                <span className="font-mono text-on-surface font-bold">{courseMetrics.totalDistanceKm}</span>
-              </div>
-              <div className="flex justify-between items-center text-body-sm">
-                <span className="text-text-secondary">Est. Completion</span>
-                <span className="font-mono text-on-surface font-bold">{courseMetrics.estTime}</span>
-              </div>
-              <div className="w-full h-1.5 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-[100%]"></div>
-              </div>
-            </div>
+            )}
           </div>
 
         </div>

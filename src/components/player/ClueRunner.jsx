@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigation, Compass, MapPin, CheckCircle2, Clock, Users, ArrowUpRight, Camera, AlertCircle } from 'lucide-react';
 import MapLibreView from '../map/MapLibreView';
 import SubmissionModal from './SubmissionModal';
-import { calculateHaversineDistance, calculateBearing } from '../../utils/geoUtils';
+import { calculateHaversineDistance, calculateBearing, getWaypointLabel } from '../../utils/geoUtils';
 
 export default function ClueRunner({ course, activeTeam, submissions = [], onSubmitData }) {
   const [activeClueId, setActiveClueId] = useState(course.clues[0]?.id);
@@ -162,10 +162,10 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center ${
+                      <span className={`w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center font-mono ${
                         isCompleted ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'
                       }`}>
-                        {c.number}
+                        {getWaypointLabel(idx)}
                       </span>
                       <div>
                         <div className="font-bold text-xs">{c.title}</div>

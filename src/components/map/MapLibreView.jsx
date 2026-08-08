@@ -1,7 +1,6 @@
-// GeoLibre-Inspired MapLibre GL JS Component for Open-Source Mapping
-
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
+import { getWaypointLabel } from '../../utils/geoUtils';
 
 const BASEMAPS = {
   osm: {
@@ -91,12 +90,27 @@ export default function MapLibreView({
     };
   }, []);
 
-  // Update center when active clue changes
+  // Fly to active clue or center whenever activeClueId or center changes
   useEffect(() => {
-    if (mapRef.current && center) {
-      mapRef.current.flyTo({ center: center, zoom: 16, duration: 1200 });
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (activeClueId && clues.length > 0) {
+      const activeClue = clues.find(c => c.id === activeClueId);
+      if (activeClue && activeClue.targetLocation) {
+        map.flyTo({
+          center: [activeClue.targetLocation.lng, activeClue.targetLocation.lat],
+          zoom: 17,
+          duration: 1000
+        });
+        return;
+      }
     }
-  }, [center]);
+
+    if (center) {
+      map.flyTo({ center: center, zoom: 16, duration: 1000 });
+    }
+  }, [activeClueId, clues, center]);
 
   // Handle Basemap Layer Switching (OSM, Satellite, Terrain)
   useEffect(() => {
@@ -192,14 +206,16 @@ export default function MapLibreView({
       });
     }
 
-    clues.forEach(clue => {
+    clues.forEach((clue, idx) => {
+      const label = getWaypointLabel(idx);
       points.push({
         type: 'CLUE',
         id: clue.id,
         lat: clue.targetLocation.lat,
         lng: clue.targetLocation.lng,
-        name: `Clue #${clue.number}: ${clue.title}`,
-        data: clue
+        name: `Waypoint ${label}: ${clue.title}`,
+        data: clue,
+        index: idx
       });
     });
 
@@ -342,19 +358,20 @@ export default function MapLibreView({
           markersRef.current.push(finishMarker);
         } else if (pt.type === 'CLUE') {
           const clue = pt.data;
+          const label = getWaypointLabel(pt.index !== undefined ? pt.index : clue.number - 1);
           const isActive = clue.id === activeClueId;
           const isCompleted = submissions.some(s => s.clueId === clue.id);
 
           const el = document.createElement('div');
-          el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 ${
+          el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 font-mono ${
             isCompleted
               ? 'bg-emerald-500 text-white border-2 border-emerald-300'
               : isActive
               ? 'bg-sky-500 text-white border-2 border-white ring-4 ring-sky-400/40 animate-bounce'
               : 'bg-slate-800 text-slate-200 border-2 border-slate-600'
           }`;
-          el.innerText = clue.number;
-          el.title = `Waypoint #${clue.number} (Drag on map to reposition)`;
+          el.innerText = label;
+          el.title = `Waypoint ${label} (Drag on map to reposition)`;
           el.onclick = () => onSelectClue(clue.id);
 
           const markerRadius = clue.targetRadiusMeters || startLocation?.activationRadiusMeters || 100;
@@ -365,7 +382,7 @@ export default function MapLibreView({
               new maplibregl.Popup({ offset: 25 }).setHTML(`
                 <div class="p-1">
                   <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${clue.category}</span>
-                  <h4 class="font-bold text-base mt-1 text-slate-100">Clue #${clue.number}: ${clue.title}</h4>
+                  <h4 class="font-bold text-base mt-1 text-slate-100">Waypoint ${label}: ${clue.title}</h4>
                   <p class="text-xs text-slate-300 mt-1">${clue.description}</p>
                   <div class="mt-2 text-xs font-mono text-cyan-400">Activation Zone: ${markerRadius}m</div>
                   <p class="text-[10px] text-cyan-400 mt-1 italic">Drag marker to reposition waypoint</p>
@@ -508,11 +525,10 @@ export default function MapLibreView({
           <button
             type="button"
             onClick={() => setIsLayerMenuOpen(!isLayerMenuOpen)}
-            className="h-9 px-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-sky-400 border border-sky-500/40 shadow-xl flex items-center gap-1.5 text-xs font-mono font-bold backdrop-blur-md cursor-pointer transition-all"
-            title="Switch Basemap & Street View"
+            className="w-10 h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-sky-400 border border-sky-500/40 shadow-2xl flex items-center justify-center font-bold backdrop-blur-md cursor-pointer transition-all hover:scale-105 active:scale-95"
+            title="Standard Layer Switcher & Mapillary Street View"
           >
-            <span className="material-symbols-outlined text-sm">layers</span>
-            <span className="hidden sm:inline">Layers</span>
+            <span className="material-symbols-outlined text-[22px]">layers</span>
           </button>
 
           {isLayerMenuOpen && (
