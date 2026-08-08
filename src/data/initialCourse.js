@@ -6,9 +6,10 @@ export const PRESET_COURSES = [
     durationMinutes: 90,
     theme: "Historical & Spatial",
     startLocation: {
-      name: "Rathmines Jetty & Slipway, NSW 2283",
-      lat: -33.0372,
-      lng: 151.5945
+      name: "Rathmines Park & Catalina Precinct, NSW 2283",
+      lat: -33.0355,
+      lng: 151.5925,
+      activationRadiusMeters: 100
     },
     finishLocation: {
       name: "Style Point Catalina Moorings",
@@ -24,7 +25,7 @@ export const PRESET_COURSES = [
         description: "Locate the historic RAAF concrete slipway where PBY Catalina flying boats launched into Lake Macquarie during WWII.",
         targetLocation: { lat: -33.0372, lng: 151.5945 },
         points: 500,
-        targetRadiusMeters: 30,
+        targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
         requiredAttributes: [
           { key: "slipway_condition", label: "Slipway Condition", type: "select", options: ["Good", "Fair", "Submerged"] }
@@ -39,7 +40,7 @@ export const PRESET_COURSES = [
         description: "Find the survey marker near the historic WWII RAAF Officers' Mess precinct overlooking Lake Macquarie.",
         targetLocation: { lat: -33.0348, lng: 151.5912 },
         points: 750,
-        targetRadiusMeters: 25,
+        targetRadiusMeters: 100,
         taskType: "POINT_CAPTURE",
         requiredAttributes: [
           { key: "structure_type", label: "Heritage Structure", type: "select", options: ["Plaque", "Foundation", "Memorial Tree"] }
@@ -54,7 +55,7 @@ export const PRESET_COURSES = [
         description: "Capture a geotagged photo of the Catalina mooring zone and boat moorings at Style Point, Lake Macquarie.",
         targetLocation: { lat: -33.0395, lng: 151.5960 },
         points: 1000,
-        targetRadiusMeters: 35,
+        targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
         requiredAttributes: [
           { key: "mooring_count", label: "Visible Boats/Moorings", type: "select", options: ["1-5", "5-10", "10+"] }
@@ -72,7 +73,8 @@ export const PRESET_COURSES = [
     startLocation: {
       name: "Cairns Hilton Wharf & Lagoon, QLD",
       lat: -16.9230,
-      lng: 145.7810
+      lng: 145.7810,
+      activationRadiusMeters: 100
     },
     finishLocation: {
       name: "Marlin Marina Pier",
@@ -88,7 +90,7 @@ export const PRESET_COURSES = [
         description: "Capture the stainless steel woven fish sculptures standing inside Cairns Lagoon pool.",
         targetLocation: { lat: -16.9200, lng: 145.7775 },
         points: 500,
-        targetRadiusMeters: 20,
+        targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
         requiredAttributes: [
           { key: "sculpture_visible", label: "Woven Fish Visible", type: "select", options: ["Yes", "No"] }
@@ -103,7 +105,7 @@ export const PRESET_COURSES = [
         description: "Record the tidal survey marker at the entrance to Marlin Marina near Cairns Hilton.",
         targetLocation: { lat: -16.9230, lng: 145.7810 },
         points: 750,
-        targetRadiusMeters: 25,
+        targetRadiusMeters: 100,
         taskType: "POINT_CAPTURE",
         requiredAttributes: [
           { key: "tide_level", label: "Tide Level", type: "select", options: ["High", "Mid", "Low"] }
@@ -121,7 +123,8 @@ export const PRESET_COURSES = [
     startLocation: {
       name: "Kyoto Imperial Palace, Japan",
       lat: 35.0254,
-      lng: 135.7621
+      lng: 135.7621,
+      activationRadiusMeters: 100
     },
     finishLocation: {
       name: "Nijo Castle Gate",
@@ -137,7 +140,7 @@ export const PRESET_COURSES = [
         description: "Identify the precise coordinates where the Golden Pavilion mirrors on the Kyōko-chi pond surface.",
         targetLocation: { lat: 35.0394, lng: 135.7292 },
         points: 500,
-        targetRadiusMeters: 25,
+        targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
         requiredAttributes: [
           { key: "reflection_visible", label: "Water Reflection", type: "select", options: ["Yes", "No", "Partial"] }
@@ -152,7 +155,7 @@ export const PRESET_COURSES = [
         description: "Record acoustic telemetry of the uguisubari floor boards near Ninomaru Palace entrance.",
         targetLocation: { lat: 35.0142, lng: 135.7482 },
         points: 750,
-        targetRadiusMeters: 20,
+        targetRadiusMeters: 100,
         taskType: "AUDIO_VALIDATION",
         requiredAttributes: [
           { key: "floor_type", label: "Floor Surface", type: "select", options: ["Timber", "Stone", "Matting"] }
@@ -164,3 +167,4 @@ export const PRESET_COURSES = [
 ];
 
 export const INITIAL_COURSE = PRESET_COURSES[0];
+

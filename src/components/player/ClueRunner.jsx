@@ -55,7 +55,8 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
     activeClue.targetLocation.lat, activeClue.targetLocation.lng
   );
 
-  const isWithinRadius = distanceToTarget <= activeClue.targetRadiusMeters;
+  const activationRadiusMeters = activeClue.targetRadiusMeters || course.startLocation?.activationRadiusMeters || 100;
+  const isWithinRadius = distanceToTarget <= activationRadiusMeters;
 
   return (
     <div className="space-y-6">
@@ -71,6 +72,9 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
         </div>
 
         <div className="flex items-center gap-3 text-xs font-mono">
+          <span className="px-2.5 py-1 rounded-lg bg-sky-950 text-sky-300 border border-sky-800">
+            Activation: {activationRadiusMeters}m
+          </span>
           {gpsAccuracy !== null && (
             <span className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800">
               Accuracy: ±{gpsAccuracy}m
@@ -115,8 +119,8 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               </div>
 
               <div className="text-right">
-                <div className="text-[10px] text-slate-500 uppercase">Target Radius</div>
-                <div className="text-sm font-semibold text-cyan-400">{activeClue.targetRadiusMeters}m</div>
+                <div className="text-[10px] text-slate-500 uppercase">Activation Zone</div>
+                <div className="text-sm font-semibold text-cyan-400">{activationRadiusMeters}m</div>
               </div>
             </div>
 
@@ -127,11 +131,11 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
                 className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-sm text-slate-950 shadow-lg shadow-emerald-500/25 animate-bounce flex items-center justify-center gap-2"
               >
                 <Camera className="w-4 h-4" />
-                <span>Geofence Unlocked! Collect Real Data</span>
+                <span>Geofence Unlocked! ({distanceToTarget}m ≤ {activationRadiusMeters}m)</span>
               </button>
             ) : (
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center text-xs text-slate-400">
-                Move within <span className="text-cyan-400 font-mono font-bold">{activeClue.targetRadiusMeters}m</span> of target coordinates to unlock data collection.
+                Move within <span className="text-cyan-400 font-mono font-bold">{activationRadiusMeters}m</span> of target coordinates to unlock data collection.
               </div>
             )}
           </div>
@@ -188,6 +192,8 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             <MapLibreView
               center={[activeClue.targetLocation.lng, activeClue.targetLocation.lat]}
               zoom={16}
+              startLocation={course.startLocation}
+              finishLocation={course.finishLocation}
               clues={course.clues}
               activeClueId={activeClue.id}
               userLocation={userLocation}

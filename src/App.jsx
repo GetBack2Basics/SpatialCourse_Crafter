@@ -9,7 +9,31 @@ import { PRESET_COURSES } from './data/initialCourse';
 import { wsService } from './services/websocketService';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('ADMIN');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Check URL search parameters or hash for explicit tab
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = (params.get('tab') || params.get('mode') || '').toUpperCase();
+    if (['ADMIN', 'PLAYER', 'SCORING'].includes(tabParam)) {
+      return tabParam;
+    }
+    if (['RUNNER', 'CLUE_RUNNER', 'FIELD', 'MOBILE'].includes(tabParam)) {
+      return 'PLAYER';
+    }
+    // If accessed on a mobile phone viewport (screen width < 768px), default to Mobile Clue Runner ('PLAYER')
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'PLAYER';
+    }
+    return 'ADMIN';
+  });
+
+  const handleTabSelect = (newTab) => {
+    setActiveTab(newTab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', newTab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
   
   // List of all courses available
   const [courses, setCourses] = useState(PRESET_COURSES);
@@ -84,14 +108,14 @@ export default function App() {
       {/* Header Bar */}
       <Header
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabSelect}
         logCount={logs.length}
         toggleLogs={() => setShowLogs(!showLogs)}
         activeTeam={activeTeam}
       />
 
       {/* Main Tab Content */}
-      <main className="w-full pt-16 min-h-[calc(100vh-4rem)]">
+      <main className="w-full pt-16 pb-20 lg:pb-0 min-h-[calc(100vh-4rem)]">
         {activeTab === 'ADMIN' && (
           <CoursePlanner
             course={activeCourse}

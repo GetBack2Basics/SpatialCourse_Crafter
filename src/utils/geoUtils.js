@@ -37,6 +37,52 @@ export function calculateBearing(lat1, lon1, lat2, lon2) {
 }
 
 /**
+ * Parses coordinates from raw strings, Google Maps URLs, DMS format, or GPS tracker text.
+ * Returns { lat, lng } or null if invalid.
+ */
+export function parseCoordinates(inputText) {
+  if (!inputText || typeof inputText !== 'string') return null;
+  const str = inputText.trim();
+
+  // 1. Google Maps URL pattern: /@(-?\d+\.\d+),(-?\d+\.\d+) or q=(-?\d+\.\d+),(-?\d+\.\d+)
+  const urlMatch = str.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || str.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (urlMatch) {
+    const lat = parseFloat(urlMatch[1]);
+    const lng = parseFloat(urlMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat, lng };
+    }
+  }
+
+  // 2. Standard decimal degrees comma/space separated or GPS format: e.g. "-33.0372, 151.5945" or "Lat -33.0372, Lng 151.5945"
+  const decMatches = str.match(/(-?\d{1,3}\.\d+)\s*[\s,:]\s*(-?\d{1,3}\.\d+)/);
+  if (decMatches) {
+    let lat = parseFloat(decMatches[1]);
+    let lng = parseFloat(decMatches[2]);
+    
+    // Check if cardinal directions are present
+    if (/S/i.test(str) && lat > 0) lat = -lat;
+    if (/W/i.test(str) && lng > 0) lng = -lng;
+
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat, lng };
+    }
+  }
+
+  // 3. DMS Degrees Minutes Seconds format e.g. 33°02'13.9"S 151°35'40.2"E
+  const dmsMatches = str.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"\s*([NS])\s*(\d+)°\s*(\d+)'\s*([\d.]+)"\s*([EW])/i);
+  if (dmsMatches) {
+    let lat = parseInt(dmsMatches[1], 10) + parseInt(dmsMatches[2], 10)/60 + parseFloat(dmsMatches[3])/3600;
+    if (dmsMatches[4].toUpperCase() === 'S') lat = -lat;
+    let lng = parseInt(dmsMatches[5], 10) + parseInt(dmsMatches[6], 10)/60 + parseFloat(dmsMatches[7])/3600;
+    if (dmsMatches[8].toUpperCase() === 'W') lng = -lng;
+    return { lat, lng };
+  }
+
+  return null;
+}
+
+/**
  * Parses EXIF metadata from photo file
  */
 export async function parsePhotoExif(file) {
@@ -55,3 +101,5 @@ export async function parsePhotoExif(file) {
   }
   return null;
 }
+
+
