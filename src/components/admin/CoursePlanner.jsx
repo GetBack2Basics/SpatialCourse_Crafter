@@ -937,6 +937,7 @@ export default function CoursePlanner({
             clues={course.clues}
             activeClueId={activeClueId}
             onSelectClue={setActiveClueId}
+            onEditClue={setEditingClue}
             onUpdateStartLocation={handleUpdateStartLocation}
             onUpdateFinishLocation={handleUpdateFinishLocation}
             onUpdateClueLocation={handleUpdateClueLocation}

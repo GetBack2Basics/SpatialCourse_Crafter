@@ -35,7 +35,9 @@ export default function MapLibreView({
   onSelectClue = () => {},
   onUpdateStartLocation = () => {},
   onUpdateFinishLocation = () => {},
-  onUpdateClueLocation = () => {}
+  onUpdateClueLocation = () => {},
+  onInspectPoint = () => {},
+  onEditClue = () => {}
 }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -89,6 +91,51 @@ export default function MapLibreView({
       map.remove();
     };
   }, []);
+
+  // Global window handlers for interactive cluster popups
+  useEffect(() => {
+    window.handleClusterSelect = (type, id) => {
+      if (type === 'CLUE') {
+        onSelectClue(id);
+        const clue = clues.find(c => c.id === id);
+        if (clue) onInspectPoint({ id: clue.id, name: clue.title, lat: clue.targetLocation.lat, lng: clue.targetLocation.lng, type: 'CLUE', data: clue });
+      } else if (type === 'START' && startLocation) {
+        onInspectPoint({ id: 'start', name: startLocation.name, lat: startLocation.lat, lng: startLocation.lng, type: 'START', data: startLocation });
+      } else if (type === 'FINISH' && finishLocation) {
+        onInspectPoint({ id: 'finish', name: finishLocation.name, lat: finishLocation.lat, lng: finishLocation.lng, type: 'FINISH', data: finishLocation });
+      }
+    };
+
+    window.handleClusterEdit = (id) => {
+      const clue = clues.find(c => c.id === id);
+      if (clue && onEditClue) {
+        onEditClue(clue);
+      }
+    };
+
+    window.handleClusterNudge = (type, id) => {
+      const offset = 0.0003; // Nudge offset ~30m to separate stacked points & update route polyline
+      if (type === 'START' && startLocation) {
+        onUpdateStartLocation({
+          lat: parseFloat((startLocation.lat + offset).toFixed(6)),
+          lng: parseFloat((startLocation.lng + offset).toFixed(6))
+        });
+      } else if (type === 'FINISH' && finishLocation) {
+        onUpdateFinishLocation({
+          lat: parseFloat((finishLocation.lat + offset).toFixed(6)),
+          lng: parseFloat((finishLocation.lng + offset).toFixed(6))
+        });
+      } else if (type === 'CLUE') {
+        const clue = clues.find(c => c.id === id);
+        if (clue) {
+          onUpdateClueLocation(id, {
+            lat: parseFloat((clue.targetLocation.lat + offset).toFixed(6)),
+            lng: parseFloat((clue.targetLocation.lng + offset).toFixed(6))
+          });
+        }
+      }
+    };
+  }, [clues, startLocation, finishLocation, onSelectClue, onInspectPoint, onEditClue, onUpdateStartLocation, onUpdateFinishLocation, onUpdateClueLocation]);
 
   // Fly to active clue or center whenever activeClueId or center changes
   useEffect(() => {
@@ -271,25 +318,60 @@ export default function MapLibreView({
         const el = document.createElement('div');
         el.className = 'w-11 h-11 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 border-2 border-white shadow-2xl flex items-center justify-center font-bold text-sm text-white cursor-pointer hover:scale-115 transition-all ring-4 ring-sky-400/40 animate-pulse';
         el.innerText = `${group.length}`;
-        el.title = `${group.length} overlapping locations! Click to expand/zoom.`;
+        el.title = `${group.length} overlapping locations! Click to inspect & select.`;
+
+        const popupContent = `
+          <div class="p-2 font-mono text-xs bg-slate-950 text-slate-100 rounded-xl border border-sky-500/40 shadow-2xl max-w-xs">
+            <div class="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-800">
+              <span class="font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800 text-[10px]">
+                ${group.length} STACKED POIs
+              </span>
+              <span class="text-[10px] text-cyan-400">Click Item to Move/Edit</span>
+            </div>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              ${group.map(g => `
+                <div class="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-sky-500/50 transition-colors">
+                  <div class="font-bold text-xs text-sky-200 truncate">${g.name}</div>
+                  <div class="text-[10px] text-slate-400 font-mono mt-0.5">${g.lat.toFixed(5)}°, ${g.lng.toFixed(5)}°</div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onclick="window.handleClusterSelect('${g.type}', '${g.id}')"
+                      class="px-2 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold text-[10px] cursor-pointer"
+                    >
+                      Select
+                    </button>
+                    ${g.type === 'CLUE' ? `
+                      <button
+                        type="button"
+                        onclick="window.handleClusterEdit('${g.id}')"
+                        class="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    ` : ''}
+                    <button
+                      type="button"
+                      onclick="window.handleClusterNudge('${g.type}', '${g.id}')"
+                      class="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[10px] cursor-pointer"
+                      title="Offset coordinates slightly to separate stacked markers & move route polyline"
+                    >
+                      Unstack & Move Line
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
 
         const clusterMarker = new maplibregl.Marker({ element: el })
           .setLngLat([avgLng, avgLat])
-          .setPopup(
-            new maplibregl.Popup({ offset: 25 }).setHTML(`
-              <div class="p-2 font-mono text-xs">
-                <span class="font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${group.length} OVERLAPPING POIs</span>
-                <ul class="mt-2 space-y-1 text-slate-200">
-                  ${group.map(g => `<li class="truncate">• ${g.name}</li>`).join('')}
-                </ul>
-                <p class="text-[10px] text-cyan-400 mt-2 italic">Click cluster to zoom in & decompose markers</p>
-              </div>
-            `)
-          )
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(popupContent))
           .addTo(map);
 
         el.onclick = () => {
-          map.flyTo({ center: [avgLng, avgLat], zoom: map.getZoom() + 2.5, duration: 800 });
+          clusterMarker.togglePopup();
         };
 
         markersRef.current.push(clusterMarker);
@@ -302,6 +384,10 @@ export default function MapLibreView({
           el.className = 'w-9 h-9 rounded-full bg-amber-500 border-2 border-white shadow-xl flex items-center justify-center font-bold text-xs text-slate-950 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform';
           el.title = 'Drag on map to reposition Start Location';
           el.innerHTML = '<span class="material-symbols-outlined text-[20px]">flag</span>';
+
+          el.onclick = () => {
+            if (onInspectPoint) onInspectPoint(pt);
+          };
 
           const startMarker = new maplibregl.Marker({ element: el, draggable: true })
             .setLngLat([pt.lng, pt.lat])
@@ -332,6 +418,9 @@ export default function MapLibreView({
           el.className = 'w-9 h-9 rounded-full bg-rose-600 border-2 border-white shadow-xl flex items-center justify-center font-bold text-xs text-white cursor-grab active:cursor-grabbing hover:scale-110 transition-transform';
           el.title = 'Drag on map to reposition Finish Location';
           el.innerHTML = '<span class="material-symbols-outlined text-[20px]">sports_score</span>';
+          el.onclick = () => {
+            if (onInspectPoint) onInspectPoint(pt);
+          };
 
           const finishMarker = new maplibregl.Marker({ element: el, draggable: true })
             .setLngLat([pt.lng, pt.lat])
@@ -372,7 +461,10 @@ export default function MapLibreView({
           }`;
           el.innerText = label;
           el.title = `Waypoint ${label} (Drag on map to reposition)`;
-          el.onclick = () => onSelectClue(clue.id);
+          el.onclick = () => {
+            onSelectClue(clue.id);
+            if (onInspectPoint) onInspectPoint(pt);
+          };
 
           const markerRadius = clue.targetRadiusMeters || startLocation?.activationRadiusMeters || 100;
 

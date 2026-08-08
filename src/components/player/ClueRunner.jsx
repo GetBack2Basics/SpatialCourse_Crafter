@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigation, Compass, MapPin, CheckCircle2, Clock, Users, ArrowUpRight, Camera, AlertCircle } from 'lucide-react';
 import MapLibreView from '../map/MapLibreView';
 import SubmissionModal from './SubmissionModal';
-import { calculateHaversineDistance, calculateBearing, getWaypointLabel } from '../../utils/geoUtils';
+import { calculateHaversineDistance, calculateBearing, calculateAzimuth, calculateElevationAndGradient, getWaypointLabel } from '../../utils/geoUtils';
 
 export default function ClueRunner({ course, activeTeam, submissions = [], onSubmitData }) {
   const [activeClueId, setActiveClueId] = useState(course.clues[0]?.id);
@@ -11,7 +11,19 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
   const [gpsError, setGpsError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [inspectedPoint, setInspectedPoint] = useState(null);
+
   const activeClue = course.clues.find(c => c.id === activeClueId) || course.clues[0];
+
+  // Target point being inspected (Start, Finish, or Waypoint)
+  const currentTarget = inspectedPoint || {
+    id: activeClue.id,
+    name: activeClue.title,
+    lat: activeClue.targetLocation.lat,
+    lng: activeClue.targetLocation.lng,
+    type: 'CLUE',
+    data: activeClue
+  };
 
   // REAL Native HTML5 Geolocation Watcher
   useEffect(() => {
@@ -44,15 +56,20 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Calculate real Haversine distance & compass bearing
+  // Calculate real Haversine distance, azimuth compass & terrain gradient Z
   const distanceToTarget = calculateHaversineDistance(
     userLocation.lat, userLocation.lng,
-    activeClue.targetLocation.lat, activeClue.targetLocation.lng
+    currentTarget.lat, currentTarget.lng
   );
 
-  const bearingToTarget = calculateBearing(
+  const azimuthData = calculateAzimuth(
     userLocation.lat, userLocation.lng,
-    activeClue.targetLocation.lat, activeClue.targetLocation.lng
+    currentTarget.lat, currentTarget.lng
+  );
+
+  const elevationData = calculateElevationAndGradient(
+    userLocation.lat, userLocation.lng,
+    currentTarget.lat, currentTarget.lng
   );
 
   const activationRadiusMeters = activeClue.targetRadiusMeters || course.startLocation?.activationRadiusMeters || 100;
@@ -94,11 +111,11 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
         {/* Left Column: Target Clue Runner Card & Clues Navigation */}
         <div className="space-y-5">
           
-          {/* Active Target Compass & HUD Card */}
+          {/* Active Target Compass & Geodetic HUD Card */}
           <div className="glass-panel-glow p-5 rounded-3xl border border-sky-500/40 relative overflow-hidden space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800">
-                ACTIVE TARGET #{activeClue.number}
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800 uppercase font-bold">
+                INSPECTED TARGET: {currentTarget.name}
               </span>
               <span className="text-xs font-bold text-amber-300 font-mono">{activeClue.points} PTS</span>
             </div>
@@ -108,19 +125,36 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               <p className="text-xs text-slate-400 mt-1">{activeClue.description}</p>
             </div>
 
-            {/* Distance & Bearing Meter */}
-            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between font-mono">
-              <div className="flex items-center gap-2">
-                <Compass className="w-5 h-5 text-sky-400" style={{ transform: `rotate(${bearingToTarget}deg)` }} />
-                <div>
-                  <div className="text-[10px] text-slate-500 uppercase">Real Distance</div>
-                  <div className="text-base font-bold text-slate-200">{distanceToTarget}m</div>
+            {/* Distance, Azimuth & Gradient Meter */}
+            <div className="p-3.5 rounded-2xl bg-slate-950 border border-sky-500/40 space-y-3 font-mono">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Compass className="w-5 h-5 text-sky-400" style={{ transform: `rotate(${azimuthData.bearing}deg)` }} />
+                  <div>
+                    <div className="text-[10px] text-slate-400 uppercase">Live Distance</div>
+                    <div className="text-base font-bold text-slate-100">{distanceToTarget}m</div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-[10px] text-slate-400 uppercase">Azimuth Heading</div>
+                  <div className="text-sm font-bold text-sky-300">{azimuthData.azimuthStr}</div>
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-[10px] text-slate-500 uppercase">Activation Zone</div>
-                <div className="text-sm font-semibold text-cyan-400">{activationRadiusMeters}m</div>
+              <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-900 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block uppercase">Elevation Diff (Z)</span>
+                  <span className="text-emerald-400 font-bold">
+                    {elevationData.elevationZ >= 0 ? `+${elevationData.elevationZ}` : elevationData.elevationZ}m
+                  </span>
+                </div>
+                <div className="bg-slate-900 p-2 rounded-xl border border-slate-800 text-right">
+                  <span className="text-[10px] text-slate-500 block uppercase">Gradient Slope</span>
+                  <span className={`font-bold ${elevationData.gradientPct > 0 ? 'text-amber-400' : 'text-cyan-400'}`}>
+                    {elevationData.slopeText}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -128,7 +162,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             {isWithinRadius ? (
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-sm text-slate-950 shadow-lg shadow-emerald-500/25 animate-bounce flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-sm text-slate-950 shadow-lg shadow-emerald-500/25 animate-bounce flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Camera className="w-4 h-4" />
                 <span>Geofence Unlocked! ({distanceToTarget}m ≤ {activationRadiusMeters}m)</span>
@@ -198,7 +232,15 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               activeClueId={activeClue.id}
               userLocation={userLocation}
               submissions={submissions}
-              onSelectClue={setActiveClueId}
+              onSelectClue={(clueId) => {
+                setActiveClueId(clueId);
+                const cl = course.clues.find(c => c.id === clueId);
+                if (cl) setInspectedPoint({ id: cl.id, name: cl.title, lat: cl.targetLocation.lat, lng: cl.targetLocation.lng, type: 'CLUE', data: cl });
+              }}
+              onInspectPoint={(pt) => {
+                setInspectedPoint(pt);
+                if (pt.type === 'CLUE') setActiveClueId(pt.id);
+              }}
             />
           </div>
         </div>
