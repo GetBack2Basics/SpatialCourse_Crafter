@@ -17,6 +17,11 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamMembers, setNewTeamMembers] = useState('');
 
+  // Team Edit State
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editTeamMembersText, setEditTeamMembersText] = useState('');
+
   // Admin User Profile Edit State
   const [editingUser, setEditingUser] = useState(null);
   const [editName, setEditName] = useState('');
@@ -84,6 +89,41 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
       setSuccessMsg(`Created team "${newTeamName}" with ${members.length} members!`);
       setNewTeamName('');
       setNewTeamMembers('');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  const startEditingTeam = (team) => {
+    setEditingTeam(team);
+    setEditTeamName(team.name || '');
+    setEditTeamMembersText((team.members || []).join(', '));
+  };
+
+  const handleSaveTeam = (e) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    if (!editingTeam) return;
+    try {
+      const members = editTeamMembersText.split(',').map(m => m.trim()).filter(Boolean);
+      authService.updateTeam(editingTeam.id, {
+        name: editTeamName,
+        members
+      });
+      setSuccessMsg(`Updated team "${editTeamName}"!`);
+      setEditingTeam(null);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  const handleDeleteTeam = (team) => {
+    setErrorMsg(null);
+    try {
+      authService.deleteTeam(team.id);
+      setSuccessMsg(`Deleted team "${team.name}".`);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setErrorMsg(err.message);
@@ -550,49 +590,117 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
         {/* Tab 4: Team Roster Manager */}
         {activeTab === 'TEAMS' && isAdmin && (
           <div className="space-y-4">
-            <form onSubmit={handleCreateTeam} className="space-y-3 font-mono">
-              <h4 className="text-xs font-bold text-slate-200 uppercase">Create New Competition Team</h4>
-              
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Team Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Team Kookaburra (VIC)"
-                  value={newTeamName}
-                  onChange={e => setNewTeamName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100"
-                />
-              </div>
+            {editingTeam ? (
+              <form onSubmit={handleSaveTeam} className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/40 space-y-3 font-mono">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h4 className="text-xs font-bold text-emerald-300 uppercase">Edit Team: {editingTeam.name}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTeam(null)}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-slate-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
 
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Member Email Addresses (Comma separated)</label>
-                <input
-                  type="text"
-                  placeholder="alex@vic.gov.au, mina@vic.gov.au"
-                  value={newTeamMembers}
-                  onChange={e => setNewTeamMembers(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100"
-                />
-              </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Team Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTeamName}
+                    onChange={e => setEditTeamName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create & Register Team</span>
-              </button>
-            </form>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Member Email Addresses (Comma separated)</label>
+                  <input
+                    type="text"
+                    value={editTeamMembersText}
+                    onChange={e => setEditTeamMembersText(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTeam(null)}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold uppercase tracking-wider"
+                  >
+                    Save Team
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleCreateTeam} className="space-y-3 font-mono">
+                <h4 className="text-xs font-bold text-slate-200 uppercase">Create New Competition Team</h4>
+                
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Team Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Team Kookaburra (VIC)"
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Member Email Addresses (Comma separated)</label>
+                  <input
+                    type="text"
+                    placeholder="alex@vic.gov.au, mina@vic.gov.au"
+                    value={newTeamMembers}
+                    onChange={e => setNewTeamMembers(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create & Register Team</span>
+                </button>
+              </form>
+            )}
 
             <div className="space-y-2 font-mono text-xs">
               <h4 className="font-bold text-slate-300 uppercase">Active Teams Roster</h4>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {authService.teams.map(t => (
                   <div key={t.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
                     <div className="flex items-center justify-between font-bold text-emerald-300">
                       <span>{t.name}</span>
-                      <span className="text-[10px] text-slate-400">{t.members.length} Members</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400">{t.members.length} Members</span>
+                        <button
+                          type="button"
+                          onClick={() => startEditingTeam(t)}
+                          className="px-2 py-0.5 rounded bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800 text-[10px] font-bold"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTeam(t)}
+                          className="px-2 py-0.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 text-[10px] font-bold"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[10px] text-slate-400">Members: {t.members.join(', ') || 'No members assigned'}</div>
                   </div>

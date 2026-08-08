@@ -146,10 +146,13 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             <div className="p-3.5 rounded-2xl bg-slate-950 border border-sky-500/40 space-y-3 font-mono">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Compass className="w-5 h-5 text-sky-400" style={{ transform: `rotate(${azimuthData.bearing}deg)` }} />
+                  <Compass className="w-5 h-5 text-sky-400 shrink-0" style={{ transform: `rotate(${azimuthData.bearing}deg)` }} />
                   <div>
-                    <div className="text-[10px] text-slate-400 uppercase">Live Distance</div>
-                    <div className="text-base font-bold text-slate-100">{distanceToTarget}m</div>
+                    <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Live Distance to Target</div>
+                    <div className="text-xs font-bold text-cyan-300 truncate max-w-[180px] sm:max-w-[240px]" title={currentTarget.name}>
+                      📍 {currentTarget.name}
+                    </div>
+                    <div className="text-base font-black text-slate-100 mt-0.5">{distanceToTarget}m</div>
                   </div>
                 </div>
 

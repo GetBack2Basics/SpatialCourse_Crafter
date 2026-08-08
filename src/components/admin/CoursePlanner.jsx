@@ -371,7 +371,7 @@ export default function CoursePlanner({
   const [newClueDesc, setNewClueDesc] = useState('');
   const [newClueLat, setNewClueLat] = useState(course.startLocation?.lat - 0.0012 || -33.0384);
   const [newClueLng, setNewClueLng] = useState(course.startLocation?.lng + 0.0015 || 151.5960);
-  const [newClueRadius, setNewClueRadius] = useState(100);
+  const [newClueRadius, setNewClueRadius] = useState(50);
   const [newCluePhotoUrl, setNewCluePhotoUrl] = useState('');
 
   // JSON Import & Export Modal State

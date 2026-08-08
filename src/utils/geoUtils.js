@@ -201,7 +201,7 @@ export function destinationPoint(lat, lng, distanceMeters, bearingDegrees) {
  * The centroid is deliberately shifted 20-40% away from the actual lat/lng so players
  * cannot locate the target pin by finding the geometric center of the shape.
  */
-export function generateOffsetBlotchPolygon(lat, lng, radiusMeters = 80, numVertices = 12, seed = 0) {
+export function generateOffsetBlotchPolygon(lat, lng, radiusMeters = 50, numVertices = 12, seed = 0) {
   // Pseudo-random helper from seed
   const pseudoRand = (s) => {
     const x = Math.sin(s) * 10000;
@@ -215,6 +215,7 @@ export function generateOffsetBlotchPolygon(lat, lng, radiusMeters = 80, numVert
 
   const ringCoordinates = [];
   const step = 360 / numVertices;
+  let topVertex = { lat: -90, lng: 0 };
 
   for (let i = 0; i < numVertices; i++) {
     const angle = i * step;
@@ -224,6 +225,11 @@ export function generateOffsetBlotchPolygon(lat, lng, radiusMeters = 80, numVert
     
     const pt = destinationPoint(offsetCentroid.lat, offsetCentroid.lng, vertexDist, angle);
     ringCoordinates.push([pt.lng, pt.lat]); // MapLibre / GeoJSON expects [lng, lat]
+
+    // Track highest latitude vertex (top center of the blotch polygon)
+    if (pt.lat > topVertex.lat) {
+      topVertex = pt;
+    }
   }
 
   // Close polygon
@@ -235,6 +241,7 @@ export function generateOffsetBlotchPolygon(lat, lng, radiusMeters = 80, numVert
       isBlotch: true,
       originalCenter: { lat, lng },
       offsetCentroid: offsetCentroid,
+      topCenter: topVertex,
       radiusMeters
     },
     geometry: {

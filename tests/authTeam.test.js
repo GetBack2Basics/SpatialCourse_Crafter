@@ -69,4 +69,22 @@ describe('Stage 4: Real Authentication & RBAC (coreagc@gmail.com Super Admin)', 
       expect(mangoTeam.members).not.toContain('jordan@nsw.gov.au');
     }
   });
+
+  it('should allow Admins to edit and delete teams', () => {
+    authService.signIn('coreagc@gmail.com', 'George Corea');
+    const newTeam = authService.createTeam('Team Echidna (SA)', ['user1@sa.gov.au']);
+    
+    // Edit team
+    const updatedTeam = authService.updateTeam(newTeam.id, {
+      name: 'Team Echidna Gold (SA)',
+      members: ['user1@sa.gov.au', 'user2@sa.gov.au']
+    });
+    expect(updatedTeam.name).toBe('Team Echidna Gold (SA)');
+    expect(updatedTeam.members.length).toBe(2);
+
+    // Delete team
+    authService.deleteTeam(newTeam.id);
+    const found = authService.teams.find(t => t.id === newTeam.id);
+    expect(found).toBeUndefined();
+  });
 });

@@ -137,12 +137,15 @@ export default function MapLibreView({
     };
   }, [clues, startLocation, finishLocation, onSelectClue, onInspectPoint, onEditClue, onUpdateStartLocation, onUpdateFinishLocation, onUpdateClueLocation]);
 
-  // Fly to active clue or center whenever activeClueId or center changes
+  const prevActiveClueIdRef = useRef(null);
+
+  // Fly to active clue ONLY when activeClueId explicitly changes (prevents jumping during pan & zoom)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    if (activeClueId && clues.length > 0) {
+    if (activeClueId && activeClueId !== prevActiveClueIdRef.current) {
+      prevActiveClueIdRef.current = activeClueId;
       const activeClue = clues.find(c => c.id === activeClueId);
       if (activeClue && activeClue.targetLocation) {
         map.flyTo({
@@ -150,14 +153,9 @@ export default function MapLibreView({
           zoom: 17,
           duration: 1000
         });
-        return;
       }
     }
-
-    if (center) {
-      map.flyTo({ center: center, zoom: 16, duration: 1000 });
-    }
-  }, [activeClueId, clues, center]);
+  }, [activeClueId, clues]);
 
   // Handle Basemap Layer Switching (OSM, Satellite, Terrain)
   useEffect(() => {
@@ -453,9 +451,9 @@ export default function MapLibreView({
           let markerLng = clue.targetLocation.lng;
 
           if (isMasked) {
-            const blotch = generateOffsetBlotchPolygon(clue.targetLocation.lat, clue.targetLocation.lng, clue.targetRadiusMeters || 80, 12, pt.index || 1);
-            markerLat = blotch.properties.offsetCentroid.lat;
-            markerLng = blotch.properties.offsetCentroid.lng;
+            const blotch = generateOffsetBlotchPolygon(clue.targetLocation.lat, clue.targetLocation.lng, clue.targetRadiusMeters || 50, 12, (pt.index || 0) + 1);
+            markerLat = blotch.properties.topCenter.lat;
+            markerLng = blotch.properties.topCenter.lng;
           }
 
           const el = document.createElement('div');

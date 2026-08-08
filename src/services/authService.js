@@ -294,6 +294,46 @@ class AuthService {
     return newTeam;
   }
 
+  updateTeam(teamId, updatedFields = {}) {
+    if (!this.isAdmin()) {
+      throw new Error("Permission Denied: Only Admins can edit teams.");
+    }
+
+    const teamIndex = this.teams.findIndex(t => t.id === teamId);
+    if (teamIndex === -1) {
+      throw new Error(`Team with ID "${teamId}" not found.`);
+    }
+
+    const existing = this.teams[teamIndex];
+    const updatedTeam = {
+      ...existing,
+      name: updatedFields.name !== undefined ? updatedFields.name : existing.name,
+      members: updatedFields.members !== undefined ? updatedFields.members : existing.members,
+      assignedCourseIds: updatedFields.assignedCourseIds !== undefined ? updatedFields.assignedCourseIds : existing.assignedCourseIds,
+      updatedAt: new Date().toISOString()
+    };
+
+    const updatedTeams = [...this.teams];
+    updatedTeams[teamIndex] = updatedTeam;
+    this.saveTeams(updatedTeams);
+    return updatedTeam;
+  }
+
+  deleteTeam(teamId) {
+    if (!this.isAdmin()) {
+      throw new Error("Permission Denied: Only Admins can delete teams.");
+    }
+
+    const teamToDelete = this.teams.find(t => t.id === teamId);
+    if (!teamToDelete) {
+      throw new Error(`Team with ID "${teamId}" not found.`);
+    }
+
+    const filtered = this.teams.filter(t => t.id !== teamId);
+    this.saveTeams(filtered);
+    return teamToDelete;
+  }
+
   assignUserToTeam(userEmail, teamId) {
     if (!this.isAdmin()) {
       throw new Error("Permission Denied: Only Admins can assign users to teams.");
