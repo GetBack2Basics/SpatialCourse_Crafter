@@ -1,0 +1,455 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "background": "#0b1000",
+                "surface-container-high": "#1b2300",
+                "on-tertiary-container": "#585a00",
+                "surface-variant": "#202900",
+                "on-tertiary-fixed": "#4d4e00",
+                "on-secondary-container": "#f0ffb7",
+                "tertiary-dim": "#ecef5f",
+                "secondary-fixed-dim": "#c4e05e",
+                "tertiary-fixed-dim": "#ecef5f",
+                "secondary-fixed": "#d2ef6a",
+                "on-error": "#450900",
+                "secondary-dim": "#c4e05e",
+                "on-background": "#f0fdbd",
+                "on-error-container": "#ffd2c8",
+                "outline": "#6f7a47",
+                "outline-variant": "#424c1d",
+                "on-primary-fixed": "#204b00",
+                "on-secondary-fixed": "#374400",
+                "surface-container-lowest": "#000000",
+                "error": "#ff7351",
+                "secondary": "#d2ef6a",
+                "error-dim": "#d53d18",
+                "surface-bright": "#263000",
+                "on-secondary-fixed-variant": "#506200",
+                "on-surface": "#f0fdbd",
+                "on-primary-fixed-variant": "#316a00",
+                "on-primary-container": "#0f2900",
+                "surface-container-highest": "#202900",
+                "inverse-surface": "#f4ffc6",
+                "surface-tint": "#a1fd63",
+                "error-container": "#b92902",
+                "primary-container": "#5fb41f",
+                "tertiary": "#fdff9d",
+                "on-surface-variant": "#a5b177",
+                "on-primary": "#2b5f00",
+                "surface": "#0b1000",
+                "primary-fixed-dim": "#94ee56",
+                "primary-dim": "#94ee56",
+                "on-secondary": "#485800",
+                "tertiary-fixed": "#fbfe6b",
+                "surface-container": "#151c00",
+                "inverse-on-surface": "#4f5a29",
+                "on-tertiary": "#616300",
+                "primary-fixed": "#a1fd63",
+                "inverse-primary": "#326c00",
+                "on-tertiary-fixed-variant": "#6a6c00",
+                "secondary-container": "#536600",
+                "surface-dim": "#0b1000",
+                "primary": "#a1fd63",
+                "surface-container-low": "#101500",
+                "tertiary-container": "#eff261"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "gutter": "24px",
+                "base": "4px",
+                "margin-mobile": "16px",
+                "margin-desktop": "48px",
+                "max-width": "1440px"
+        },
+        "fontFamily": {
+                "label-md": [
+                        "Montserrat"
+                ],
+                "headline-lg-mobile": [
+                        "Montserrat"
+                ],
+                "body-sm": [
+                        "Montserrat"
+                ],
+                "headline-md": [
+                        "Montserrat"
+                ],
+                "body-md": [
+                        "Montserrat"
+                ],
+                "label-sm": [
+                        "Montserrat"
+                ],
+                "headline-xl": [
+                        "Montserrat"
+                ],
+                "headline-lg": [
+                        "Montserrat"
+                ],
+                "body-lg": [
+                        "Montserrat"
+                ]
+        },
+        "fontSize": {
+                "label-md": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-sm": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "10px",
+                        {
+                                "lineHeight": "14px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-xl": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-background"><div class="w-full"><header class="fixed top-0 left-0 right-0 h-16 bg-surface-container/90 backdrop-blur-xl border-b border-outline-variant/10 z-40 flex items-center justify-between px-margin-desktop shadow-sm"><div class="flex items-center gap-6"><div class="flex items-center gap-2 border-r border-outline-variant/30 pr-6"><span class="material-symbols-outlined text-primary text-[28px]">biotech</span><span class="font-headline-md text-headline-md text-primary tracking-tight">FUNGIS</span></div><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-[#00e5ff]"></div><span class="font-label-md text-label-md text-on-surface-variant uppercase">Active Team:</span><span class="font-headline-md text-body-lg text-on-surface font-bold">Team Mango Mapping</span></div></div><div class="flex items-center gap-gutter"><div class="flex items-center bg-surface-container-high px-4 py-2 rounded-xl border border-outline-variant/30 gap-2"><span class="material-symbols-outlined text-on-surface-variant text-[20px]">search</span><input class="bg-transparent border-none text-sm font-body-sm focus:ring-0 w-48 outline-none text-on-surface placeholder-on-surface-variant/50" placeholder="Lat, Long search..." type="text"/></div><div class="flex items-center gap-4 border-l border-outline-variant/30 pl-gutter"><span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors text-[24px]">notifications</span><span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors text-[24px]">help</span><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="relative pt-16 min-h-screen bg-background"><div class="flex flex-col w-full h-full relative overflow-hidden bg-background">
+<!-- Atmospheric Background Overlay -->
+<div class="absolute inset-0 pointer-events-none opacity-20">
+<svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="40" id="grid" patternunits="userSpaceOnUse" width="40">
+<path class="text-surface-variant" d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" stroke-width="0.5"></path>
+</pattern>
+</defs>
+<rect fill="url(#grid)" height="100%" width="100%"></rect>
+<!-- Animated scanline -->
+<rect class="text-[#00e5ff] opacity-10" fill="currentColor" height="2" style="animation: scan 8s linear infinite;" width="100%"></rect>
+<style>
+                @keyframes scan {
+                    0% { transform: translateY(-100%); }
+                    100% { transform: translateY(100vh); }
+                }
+            </style>
+</svg>
+</div>
+<!-- Main Content Container -->
+<div class="flex-1 overflow-y-auto px-margin-desktop py-12 relative z-10 max-w-max-width mx-auto w-full">
+<!-- Header Section -->
+<header class="mb-12 flex flex-col md:flex-row justify-between items-end gap-6 relative">
+<div class="max-w-3xl">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-[#00e5ff] text-[24px]">terminal</span>
+<h2 class="font-label-md text-label-md text-[#00e5ff] tracking-widest uppercase">Multi-Factor Scoring &amp; Workshop Rules Studio</h2>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-on-background mb-4 uppercase tracking-tighter">
+                    Spatial Olympics '26 <br/>
+<span class="text-primary">Live Leaderboard &amp; Vibe-Coding Engine</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl leading-relaxed">
+                    Live prompt-driven rule evaluation for workshop demonstrations. Adjust criteria weights or type vibe-coding prompts to tune winner selection on the fly.
+                </p>
+</div>
+<button class="bg-primary hover:bg-primary-dim text-on-primary font-label-md text-label-md uppercase px-8 py-4 rounded-xl shadow-xl shadow-primary/20 flex items-center gap-3 transition-all transform hover:-translate-y-1 group">
+<span class="material-symbols-outlined group-hover:rotate-180 transition-transform duration-500">play_circle</span>
+                Run Day 1 AI Validation
+            </button>
+</header>
+<!-- Split View Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Vibe-Coding Studio -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<!-- Prompt Builder Panel -->
+<section class="bg-surface-container rounded-2xl p-6 relative overflow-hidden group border border-outline-variant/30 shadow-lg">
+<div class="absolute top-0 left-0 w-1 h-full bg-[#00e5ff]"></div>
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-label-md text-label-md text-on-surface tracking-widest uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-[#00e5ff] text-[18px]">code_blocks</span>
+                            Workshop Vibe-Coding Prompt Builder
+                        </h3>
+<div class="flex items-center gap-2 bg-[#00e5ff]/10 px-3 py-1.5 rounded-full border border-[#00e5ff]/20">
+<div class="w-2 h-2 rounded-full bg-[#00e5ff] animate-pulse"></div>
+<span class="font-label-sm text-label-sm text-[#00e5ff]">Live Evaluation</span>
+</div>
+</div>
+<div class="mb-4 relative">
+<textarea class="w-full bg-surface-container-highest text-on-surface font-body-sm p-4 rounded-xl h-32 focus:outline-none focus:ring-1 focus:ring-[#00e5ff] resize-none placeholder:text-on-surface-variant/50 border border-outline-variant/30" placeholder="Try typing keywords: 'group photo', 'speed', or 'precision' to see live score adjustments..."></textarea>
+<span class="material-symbols-outlined absolute right-4 bottom-4 text-[#00e5ff]/30 pointer-events-none">auto_awesome</span>
+</div>
+<button class="w-full bg-surface-container-highest hover:bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 font-label-md text-label-md uppercase py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">magic_button</span>
+                        Apply Vibe Rule
+                    </button>
+</section>
+<!-- Criteria Weights Panel -->
+<section class="bg-surface-container rounded-2xl p-6 border border-outline-variant/30 shadow-lg">
+<h3 class="font-label-md text-label-md text-on-surface tracking-widest uppercase mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[#ffb300] text-[18px]">tune</span>
+                        Evaluation Criteria Weights
+                    </h3>
+<div class="space-y-6">
+<!-- Weight Item 1 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-on-surface-variant">Spatial Distance Precision</span>
+<span class="text-[#ffb300]">35%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-[#ffb300] rounded-full relative" style="width: 35%">
+<div class="absolute inset-0 bg-white/20"></div>
+</div>
+</div>
+</div>
+<!-- Weight Item 2 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-on-surface-variant">Photo Object &amp; Vision QA</span>
+<span class="text-[#00e5ff]">25%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-[#00e5ff] rounded-full" style="width: 25%"></div>
+</div>
+</div>
+<!-- Weight Item 3 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-on-surface-variant">Group Photo Compliance (Bonus)</span>
+<span class="text-primary">15%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 15%"></div>
+</div>
+</div>
+<!-- Weight Item 4 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-on-surface-variant">Point Capture Speed (PTS/min)</span>
+<span class="text-[#ffb300]">15%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-[#ffb300] rounded-full opacity-70" style="width: 15%"></div>
+</div>
+</div>
+<!-- Weight Item 5 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-on-surface-variant">Time Penalty Weight</span>
+<span class="text-error">10%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full" style="width: 10%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 bg-surface-container-highest rounded-xl border border-outline-variant/20 flex gap-3 items-start">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">info</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+<strong class="text-on-surface font-semibold">Primary Fail-Safe Mechanism:</strong> Raw points earned provide a fail-safe baseline, supplemented by multi-factor weighted multipliers.
+                        </p>
+</div>
+</section>
+</div>
+<!-- Right Column: Live Leaderboard -->
+<div class="lg:col-span-7 flex flex-col gap-5">
+<div class="flex justify-between items-center mb-2 px-2">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-3">
+                        Live Standings
+                        <div class="flex space-x-1">
+<div class="w-1.5 h-4 bg-primary animate-[pulse_1s_ease-in-out_infinite]"></div>
+<div class="w-1.5 h-6 bg-[#00e5ff] animate-[pulse_1.2s_ease-in-out_infinite]"></div>
+<div class="w-1.5 h-3 bg-[#ffb300] animate-[pulse_0.8s_ease-in-out_infinite]"></div>
+</div>
+</h3>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant/30">3 Teams Active</span>
+</div>
+<!-- Team Card 1 -->
+<article class="bg-surface-container rounded-2xl p-6 relative overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 group border border-primary/30 shadow-lg">
+<!-- Rank Indicator -->
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-colors"></div>
+<div class="absolute right-0 top-0 bg-primary text-on-primary font-headline-md text-headline-md w-12 h-12 flex items-center justify-center rounded-bl-2xl shadow-lg">1</div>
+<div class="pr-14 mb-5">
+<h4 class="font-headline-lg text-headline-lg text-on-surface mb-2 flex items-center gap-3">
+                            Team Mango <span class="font-label-sm text-label-sm text-primary uppercase tracking-widest bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-md">NSW</span>
+</h4>
+<div class="flex gap-4 font-body-sm text-body-sm text-on-surface-variant items-center bg-surface-container-highest/50 inline-flex px-3 py-1.5 rounded-lg border border-outline-variant/20">
+<span class="flex items-center gap-1.5 text-on-surface"><span class="material-symbols-outlined text-[18px] text-primary">check_circle</span> 0/3 Clues Done</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">group</span> coreagc@gmail.com, Taylor</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-surface-container-highest rounded-xl border border-outline-variant/20">
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Total Score</div>
+<div class="font-headline-md text-headline-md text-primary drop-shadow-md">0 PTS</div>
+</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Base Points</div>
+<div class="font-body-lg text-body-lg text-on-surface">0 pts</div>
+</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Capture Rate</div>
+<div class="font-body-lg text-body-lg text-on-surface">0 pts/m</div>
+</div>
+</div>
+<div class="mb-6 flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#00e5ff]">my_location</span> Spatial QA: 0%
+                        </span>
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#00e5ff]">visibility</span> Vision QA: 0%
+                        </span>
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#00e5ff]">diversity_3</span> Group Photo: 0%
+                        </span>
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#00e5ff]">speed</span> Capture Rate: 0%
+                        </span>
+</div>
+<div class="bg-surface-container-highest p-4 rounded-xl border-l-4 border-primary">
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+<span class="text-primary font-semibold font-label-md uppercase tracking-wider">&gt; AI Rationale:</span> Fail-safe base: 0 pts. Metrics: GPS Precision (0%), Photo AI (0%), Group Photos (0%), Speed (0 pts/min).
+                        </p>
+</div>
+</article>
+<!-- Team Card 2 -->
+<article class="bg-surface-container rounded-2xl p-6 relative overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[#ffb300]/10 group border border-outline-variant/20 shadow-lg">
+<div class="absolute right-0 top-0 bg-surface-container-highest text-on-surface-variant font-headline-md text-headline-md w-12 h-12 flex items-center justify-center rounded-bl-2xl border-l border-b border-outline-variant/20">2</div>
+<div class="pr-14 mb-5">
+<h4 class="font-headline-lg text-headline-lg text-on-surface mb-2 flex items-center gap-3">
+                            Team Wombat <span class="font-label-sm text-label-sm text-[#ffb300] uppercase tracking-widest bg-[#ffb300]/10 border border-[#ffb300]/20 px-2.5 py-1 rounded-md">QLD</span>
+</h4>
+<div class="flex gap-4 font-body-sm text-body-sm text-on-surface-variant items-center bg-surface-container-highest/50 inline-flex px-3 py-1.5 rounded-lg border border-outline-variant/20">
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">check_circle</span> 0/3 Clues Done</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">group</span> Sarah, Ken</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-surface-container-highest rounded-xl border border-outline-variant/20">
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Total Score</div>
+<div class="font-headline-md text-headline-md text-on-surface">0 PTS</div>
+</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Base Points</div>
+<div class="font-body-lg text-body-lg text-on-surface">0 pts</div>
+</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Capture Rate</div>
+<div class="font-body-lg text-body-lg text-on-surface">0 pts/m</div>
+</div>
+</div>
+<div class="mb-6 flex flex-wrap gap-2 opacity-70">
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">my_location</span> Spatial QA: 0%
+                        </span>
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">visibility</span> Vision QA: 0%
+                        </span>
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">diversity_3</span> Group Photo: 0%
+                        </span>
+<span class="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">speed</span> Capture Rate: 0%
+                        </span>
+</div>
+<div class="bg-surface-container-highest p-4 rounded-xl border-l-4 border-outline-variant">
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+<span class="text-on-surface font-semibold font-label-md uppercase tracking-wider">&gt; AI Rationale:</span> Fail-safe base: 0 pts. Metrics: GPS Precision (0%), Photo AI (0%), Group Photos (0%), Speed (0 pts/min).
+                        </p>
+</div>
+</article>
+<!-- Team Card 3 -->
+<article class="bg-surface-container rounded-2xl p-6 relative overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[#00e5ff]/10 group border border-outline-variant/20 shadow-lg opacity-90">
+<div class="absolute right-0 top-0 bg-surface-container-highest text-on-surface-variant font-headline-md text-headline-md w-12 h-12 flex items-center justify-center rounded-bl-2xl border-l border-b border-outline-variant/20">3</div>
+<div class="pr-14 mb-5">
+<h4 class="font-headline-lg text-headline-lg text-on-surface mb-2 flex items-center gap-3">
+                            Team Koala <span class="font-label-sm text-label-sm text-[#00e5ff] uppercase tracking-widest bg-[#00e5ff]/10 border border-[#00e5ff]/20 px-2.5 py-1 rounded-md">VIC</span>
+</h4>
+<div class="flex gap-4 font-body-sm text-body-sm text-on-surface-variant items-center bg-surface-container-highest/50 inline-flex px-3 py-1.5 rounded-lg border border-outline-variant/20">
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">check_circle</span> 0/3 Clues Done</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">group</span> Alex, Mina</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-surface-container-highest rounded-xl border border-outline-variant/20">
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Total Score</div>
+<div class="font-headline-md text-headline-md text-on-surface">0 PTS</div>
+</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Base Points</div>
+<div class="font-body-lg text-body-lg text-on-surface">0 pts</div>
+</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Capture Rate</div>
+<div class="font-body-lg text-body-lg text-on-surface">0 pts/m</div>
+</div>
+</div>
+<div class="bg-surface-container-highest p-4 rounded-xl border-l-4 border-outline-variant">
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+<span class="text-on-surface font-semibold font-label-md uppercase tracking-wider">&gt; AI Rationale:</span> Fail-safe base: 0 pts. Metrics: GPS Precision (0%), Photo AI (0%), Group Photos (0%), Speed (0 pts/min).
+                        </p>
+</div>
+</article>
+</div>
+</div>
+</div>
+</div></main></div></body></html>
