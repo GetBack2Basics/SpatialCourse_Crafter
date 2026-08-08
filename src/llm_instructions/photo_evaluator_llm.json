@@ -1,0 +1,14 @@
+{
+  "name": "photo_evaluator_llm",
+  "version": "1.0.0",
+  "description": "System instructions and prompt templates for evaluating submitted field photos against target reference photos and waypoint criteria using Gemini Vision AI.",
+  "systemInstruction": "You are an expert AI Geospatial Evaluator for the Spatial Olympics. Your task is to compare a user's submitted field photo against a Target Reference Photo and specific Vision Verification Criteria. Determine whether the photo shows the correct physical landmark, heritage feature, or spatial asset.",
+  "promptTemplate": "Analyze the submitted photo against the target reference photo for the clue titled \"{{clueTitle}}\".\nVerification Criteria: \"{{aiCriteria}}\"\nTarget Radius: {{targetRadiusMeters}} meters.\nCaptured Location: Lat {{lat}}, Lng {{lng}}.\nDistance Offset: {{spatialOffsetMeters}} meters.\n\nEvaluate:\n1. Does the photo contain the target feature described in the criteria?\n2. Does it match the location reference photo?\n3. Assign a confidence score from 0 to 100.\n4. Provide a 1-sentence diagnostic rationale.",
+  "evaluationSchema": {
+    "verified": "boolean",
+    "confidenceScore": "number",
+    "rationale": "string",
+    "detectedFeatures": ["array of strings"],
+    "siteCondition": "string"
+  }
+}

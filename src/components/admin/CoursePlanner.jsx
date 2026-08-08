@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import MapLibreView from '../map/MapLibreView';
+import MapLocationPicker from '../map/MapLocationPicker';
 import { wsService } from '../../services/websocketService';
 import { calculateHaversineDistance, parseCoordinates, getWaypointLabel } from '../../utils/geoUtils';
+import { generateCourseWithLLM } from '../../services/courseGeneratorService';
 
 export default function CoursePlanner({
   course,
@@ -92,7 +94,7 @@ export default function CoursePlanner({
     setShowSuggestions(false);
   }, [course]);
 
-  // Real-time location search & autofill strictly biased to user's region/state/country first
+  // Location search & autofill strictly biased to user's region/state/country first
   useEffect(() => {
     if (!startName || startName.trim().length < 3) {
       setLocationSuggestions([]);
@@ -138,7 +140,7 @@ export default function CoursePlanner({
     return () => clearTimeout(timer);
   }, [startName, startLat, startLng]);
 
-  // Real-time location search & autofill strictly biased to user's region/state/country first
+  // Location search & autofill strictly biased to user's region/state/country first
   useEffect(() => {
     if (!finishName || finishName.trim().length < 3) {
       setFinishLocationSuggestions([]);
@@ -370,10 +372,154 @@ export default function CoursePlanner({
   const [newClueLat, setNewClueLat] = useState(course.startLocation?.lat - 0.0012 || -33.0384);
   const [newClueLng, setNewClueLng] = useState(course.startLocation?.lng + 0.0015 || 151.5960);
   const [newClueRadius, setNewClueRadius] = useState(100);
+  const [newCluePhotoUrl, setNewCluePhotoUrl] = useState('');
+
+  // JSON Import & Export Modal State
+  const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
+  const [jsonInputText, setJsonInputText] = useState('');
+
+  // Dynamic Themes State & AI Web Research Generation State
+  const [availableThemes, setAvailableThemes] = useState([
+    { name: 'WW2 Heritage & Boating', icon: 'flight_takeoff', desc: 'RAAF Catalina bases, historic slipways, and military heritage.' },
+    { name: 'Historical & Spatial', icon: 'history_edu', desc: 'Focus on historical progression across geographic zones.' },
+    { name: 'Cultural Heritage', icon: 'temple_buddhist', desc: 'Sites of profound cultural and societal impact.' },
+    { name: 'Eco & Environmental', icon: 'eco', desc: 'Natural reserves, topographies, and conservation zones.' },
+    { name: 'Geodetic Precision', icon: 'satellite_alt', desc: 'High-accuracy surveying marks and geospatial anchors.' }
+  ]);
+  const [customThemeInput, setCustomThemeInput] = useState('');
+  const [isGeneratingCourse, setIsGeneratingCourse] = useState(false);
+  const [editingThemeItem, setEditingThemeItem] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToastMessage({ text: msg, type });
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Export Course JSON Handler
+  const handleExportJson = (courseToExport) => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(courseToExport, null, 2));
+    const downloadAnchor = document.createElement('a');
+    const filename = `spatial-course-${courseToExport.id || 'export'}-${Date.now()}.json`;
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", filename);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast(`📥 Exported course JSON file "${filename}"!`);
+    wsService.emitLog('SYSTEM', `Exported Course JSON for "${courseToExport.title}" (${courseToExport.clues.length} waypoints).`);
+  };
+
+  // Import Course JSON Handler
+  const importCourseFromJson = (jsonText) => {
+    try {
+      const parsed = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
+
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error("Invalid JSON structure.");
+      }
+
+      if (!parsed.title || !Array.isArray(parsed.clues)) {
+        throw new Error("JSON must contain at least 'title' and a 'clues' array.");
+      }
+
+      // Sanitize and re-index clues
+      const sanitizedClues = parsed.clues.map((c, idx) => ({
+        id: c.id || `clue-${Date.now()}-${idx + 1}`,
+        number: idx + 1,
+        title: c.title || `Waypoint #${idx + 1}`,
+        category: c.category || 'Geospatial',
+        description: c.description || '',
+        targetLocation: {
+          lat: parseFloat(c.targetLocation?.lat ?? c.lat ?? -33.0372),
+          lng: parseFloat(c.targetLocation?.lng ?? c.lng ?? 151.5945)
+        },
+        points: parseInt(c.points, 10) || 500,
+        targetRadiusMeters: parseInt(c.targetRadiusMeters, 10) || 100,
+        taskType: c.taskType || 'PHOTO_VALIDATION',
+        referencePhotoUrl: c.referencePhotoUrl || '',
+        requiredAttributes: Array.isArray(c.requiredAttributes) ? c.requiredAttributes : [],
+        aiCriteria: c.aiCriteria || 'Verify photo matches waypoint feature at target location.'
+      }));
+
+      const importedCourse = {
+        id: parsed.id || `imported-course-${Date.now()}`,
+        title: parsed.title,
+        subtitle: parsed.subtitle || 'Imported Spatial Challenge',
+        durationMinutes: parseInt(parsed.durationMinutes, 10) || 60,
+        theme: parsed.theme || 'Custom GIS',
+        startLocation: {
+          name: parsed.startLocation?.name || 'Course Start Point',
+          lat: parseFloat(parsed.startLocation?.lat ?? -33.0360),
+          lng: parseFloat(parsed.startLocation?.lng ?? 151.5930),
+          activationRadiusMeters: parseInt(parsed.startLocation?.activationRadiusMeters, 10) || 100
+        },
+        finishLocation: {
+          name: parsed.finishLocation?.name || 'Course Finish Point',
+          lat: parseFloat(parsed.finishLocation?.lat ?? -33.0395),
+          lng: parseFloat(parsed.finishLocation?.lng ?? 151.5960)
+        },
+        clues: sanitizedClues
+      };
+
+      onUpdateCourse(importedCourse);
+      showToast(`✅ Imported course "${importedCourse.title}" with ${sanitizedClues.length} waypoints!`);
+      wsService.emitLog('SYSTEM', `Imported course JSON: "${importedCourse.title}" with ${sanitizedClues.length} waypoints.`);
+      return true;
+    } catch (err) {
+      showToast(`❌ Failed to import course JSON: ${err.message}`, 'error');
+      return false;
+    }
+  };
+
+  // Add Custom Theme Handler
+  const handleAddCustomTheme = (e) => {
+    e.preventDefault();
+    if (!customThemeInput || !customThemeInput.trim()) return;
+
+    const trimmed = customThemeInput.trim();
+    if (availableThemes.some(t => t.name.toLowerCase() === trimmed.toLowerCase())) {
+      setTheme(trimmed);
+      setCustomThemeInput('');
+      return;
+    }
+
+    const newThemeObj = {
+      name: trimmed,
+      icon: 'auto_awesome',
+      desc: `Custom spatial theme: "${trimmed}"`
+    };
+
+    setAvailableThemes([...availableThemes, newThemeObj]);
+    setTheme(trimmed);
+    setCustomThemeInput('');
+    showToast(`✨ Added custom theme: "${trimmed}"!`);
+    wsService.emitLog('SYSTEM', `Admin added custom theme: "${trimmed}"`);
+  };
+
+  // Generate Course via Gemini LLM & Web Research
+  const handleGenerateCourseWithAI = async (selectedTheme = theme) => {
+    setIsGeneratingCourse(true);
+    showToast(`🤖 Gemini AI Web Researching landmarks for theme "${selectedTheme}"...`, 'info');
+
+    try {
+      const generated = await generateCourseWithLLM({
+        theme: selectedTheme,
+        startLocation: { name: startName, lat: parseFloat(startLat), lng: parseFloat(startLng) },
+        finishLocation: { name: finishName, lat: parseFloat(finishLat), lng: parseFloat(finishLng) },
+        durationMinutes: parseInt(duration, 10) || 60
+      });
+
+      if (generated && generated.clues) {
+        setTitle(generated.title);
+        setTheme(selectedTheme);
+        onUpdateCourse(generated);
+        showToast(`✨ Generated AI course "${generated.title}" with ${generated.clues.length} waypoints!`);
+      }
+    } catch (err) {
+      showToast(`❌ Course generation error: ${err.message}`, 'error');
+    } finally {
+      setIsGeneratingCourse(false);
+    }
   };
 
   const handleSaveCourse = async () => {
@@ -443,6 +589,7 @@ export default function CoursePlanner({
       points: 500,
       targetRadiusMeters: parseInt(newClueRadius, 10) || 100,
       taskType: 'PHOTO_VALIDATION',
+      referencePhotoUrl: newCluePhotoUrl || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600',
       requiredAttributes: [
         { key: 'site_condition', label: 'Condition', type: 'select', options: ['Good', 'Fair', 'Requires Maint'] }
       ],
@@ -462,6 +609,7 @@ export default function CoursePlanner({
     setNewClueTitle('');
     setNewClueDesc('');
     setNewClueRadius(100);
+    setNewCluePhotoUrl('');
   };
 
   return (
@@ -509,6 +657,53 @@ export default function CoursePlanner({
           >
             <span className="material-symbols-outlined text-sm">add_circle</span>
             New Course
+          </button>
+
+          {/* JSON Export, File Import & Studio Editor Controls */}
+          <button
+            type="button"
+            onClick={() => handleExportJson(course)}
+            title="Export course details as JSON file"
+            className="h-9 px-3 rounded-full font-label-md text-xs bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-subtle transition-all font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm font-mono"
+          >
+            <span className="material-symbols-outlined text-sm text-cyan-400">download</span>
+            <span>Export JSON</span>
+          </button>
+
+          <label
+            title="Import course details from JSON file"
+            className="h-9 px-3 rounded-full font-label-md text-xs bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-subtle transition-all font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm font-mono"
+          >
+            <span className="material-symbols-outlined text-sm text-emerald-400">upload_file</span>
+            <span>Import JSON</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  importCourseFromJson(ev.target.result);
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => {
+              setJsonInputText(JSON.stringify(course, null, 2));
+              setIsJsonModalOpen(true);
+            }}
+            title="View / Edit Raw Course JSON Studio"
+            className="h-9 px-3 rounded-full font-label-md text-xs bg-surface-container hover:bg-surface-container-high text-on-surface border border-border-subtle transition-all font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm font-mono"
+          >
+            <span className="material-symbols-outlined text-sm text-amber-400">code</span>
+            <span>JSON Studio</span>
           </button>
 
           <div className="w-px h-6 bg-border-subtle hidden sm:block mx-1"></div>
@@ -586,7 +781,7 @@ export default function CoursePlanner({
                   </div>
                 </div>
 
-                {/* Start Location Name with Real-time 3+ Character Autofill / Autocomplete */}
+                {/* Start Location Name with 3+ Character Autofill / Autocomplete */}
                 <div className="relative group">
                   <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase flex justify-between items-center">
                     <span>Start Location Name (Draggable)</span>
@@ -764,25 +959,45 @@ export default function CoursePlanner({
               </div>
             </section>
 
-            {/* Section: Theme Selection */}
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">02</div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">Location Theme</h2>
+            {/* Section: Theme Selection & AI Web Research Course Generation */}
+            <section className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">02</div>
+                  <div>
+                    <h2 className="font-headline-md text-headline-md text-on-surface">Location Theme</h2>
+                    <p className="text-xs text-text-secondary">Choose or add a theme to generate custom route waypoints via local AI web research.</p>
+                  </div>
+                </div>
               </div>
+
+              {/* Add Custom Theme Form */}
+              <form onSubmit={handleAddCustomTheme} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Type a new custom theme (e.g. Indigenous Lagoon Ecology, Sculpture Walk)..."
+                  value={customThemeInput}
+                  onChange={e => setCustomThemeInput(e.target.value)}
+                  className="flex-1 bg-surface-container-lowest rounded-xl px-4 py-2.5 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono shadow-sm"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary/20 text-xs font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  <span>Add Theme</span>
+                </button>
+              </form>
+
+              {/* Theme Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { name: 'Historical & Spatial', icon: 'history_edu', desc: 'Focus on historical progression across geographic zones.' },
-                  { name: 'Cultural Heritage', icon: 'temple_buddhist', desc: 'Sites of profound cultural and societal impact.' },
-                  { name: 'Eco & Environmental', icon: 'eco', desc: 'Natural reserves, topographies, and conservation zones.' },
-                  { name: 'Geodetic Precision', icon: 'satellite_alt', desc: 'High-accuracy surveying marks and geospatial anchors.' }
-                ].map(item => {
+                {availableThemes.map(item => {
                   const isActive = theme === item.name;
                   return (
-                    <button
+                    <div
                       key={item.name}
                       onClick={() => setTheme(item.name)}
-                      className={`text-left p-4 rounded-xl border transition-colors shadow-sm group relative overflow-hidden cursor-pointer ${
+                      className={`text-left p-4 rounded-xl border transition-colors shadow-sm group relative overflow-hidden cursor-pointer flex flex-col justify-between ${
                         isActive
                           ? 'border-2 border-primary bg-primary/5'
                           : 'border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low'
@@ -791,12 +1006,45 @@ export default function CoursePlanner({
                       {isActive && (
                         <div className="absolute top-0 right-0 bg-primary text-on-primary text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg">Active</div>
                       )}
-                      <span className={`material-symbols-outlined mb-2 text-[28px] group-hover:scale-110 transition-transform ${isActive ? 'text-primary' : 'text-tertiary'}`} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
-                        {item.icon}
-                      </span>
-                      <h3 className={`font-label-md text-label-md mb-1 ${isActive ? 'text-primary' : 'text-on-surface'}`}>{item.name}</h3>
-                      <p className="font-body-sm text-body-sm text-text-secondary line-clamp-2">{item.desc}</p>
-                    </button>
+
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={`material-symbols-outlined text-[28px] group-hover:scale-110 transition-transform ${isActive ? 'text-primary' : 'text-tertiary'}`} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                          {item.icon}
+                        </span>
+                        
+                        {/* Edit Theme Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingThemeItem({ originalName: item.name, name: item.name, icon: item.icon, desc: item.desc });
+                          }}
+                          title="Edit Theme"
+                          className="p-1 rounded-lg bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                        </button>
+                      </div>
+
+                      <div>
+                        <h3 className={`font-label-md text-label-md mb-1 ${isActive ? 'text-primary' : 'text-on-surface'}`}>{item.name}</h3>
+                        <p className="font-body-sm text-body-sm text-text-secondary line-clamp-2 mb-3">{item.desc}</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTheme(item.name);
+                          handleGenerateCourseWithAI(item.name);
+                        }}
+                        disabled={isGeneratingCourse}
+                        className="mt-2 w-full py-1.5 px-3 rounded-lg bg-surface-container-high hover:bg-primary/10 text-primary border border-primary/30 text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-xs">travel_explore</span>
+                        <span>Generate "{item.name}" Course</span>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -893,6 +1141,18 @@ export default function CoursePlanner({
                     </div>
 
                     <p className="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">{clue.description}</p>
+
+                    {/* Location Reference Photo Preview in Admin Sidebar */}
+                    {clue.referencePhotoUrl && (
+                      <div className="pl-2 mb-3">
+                        <div className="relative rounded-lg overflow-hidden border border-border-subtle max-h-28 group">
+                          <img src={clue.referencePhotoUrl} alt={clue.title} className="w-full h-28 object-cover group-hover:scale-105 transition-transform" />
+                          <div className="absolute bottom-1 left-1 bg-surface/85 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-primary border border-border-subtle font-bold">
+                            Location Reference Target
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="pl-2 space-y-1.5 font-mono text-[11px]">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1066,6 +1326,44 @@ export default function CoursePlanner({
               </div>
 
               <div>
+                <label className="text-xs font-bold text-on-surface-variant uppercase flex justify-between items-center">
+                  <span>Location Reference Photo (What users see)</span>
+                  <span className="text-[10px] text-primary font-mono font-normal">Upload file or paste URL</span>
+                </label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="text"
+                    placeholder="Image URL or upload file..."
+                    value={editingClue.referencePhotoUrl || ''}
+                    onChange={e => setEditingClue({ ...editingClue, referencePhotoUrl: e.target.value })}
+                    className="flex-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono"
+                  />
+                  <label className="px-3 py-2 rounded-lg bg-surface-container-high hover:bg-surface-variant text-primary border border-border-subtle text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1">
+                    <span>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setEditingClue({ ...editingClue, referencePhotoUrl: ev.target.result });
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
+                {editingClue.referencePhotoUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border-subtle max-h-32">
+                    <img src={editingClue.referencePhotoUrl} alt="Location Preview" className="w-full h-32 object-cover" />
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <label className="text-xs font-bold text-primary uppercase">Vision Verification Criteria Prompt</label>
                 <textarea
                   rows={2}
@@ -1073,6 +1371,23 @@ export default function CoursePlanner({
                   onChange={e => setEditingClue({ ...editingClue, aiCriteria: e.target.value })}
                   placeholder="Enter custom criteria for evaluating photo submissions..."
                   className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              {/* Interactive Search & Click/Drag Map Location Picker */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant uppercase flex justify-between items-center font-mono">
+                  <span>Target Location Map Search & Pin Placement</span>
+                  <span className="text-[10px] text-cyan-400 font-normal">Search place or click/drag marker on map</span>
+                </label>
+                <MapLocationPicker
+                  lat={editingClue.targetLocation.lat}
+                  lng={editingClue.targetLocation.lng}
+                  height="220px"
+                  onChangeLocation={({ lat, lng }) => setEditingClue({
+                    ...editingClue,
+                    targetLocation: { lat, lng }
+                  })}
                 />
               </div>
 
@@ -1140,40 +1455,47 @@ export default function CoursePlanner({
       {/* Add Clue Modal */}
       {isAddingClue && (
         <div className="fixed inset-0 z-50 bg-surface/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest p-6 rounded-xl border border-primary max-w-lg w-full space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-on-surface">Add New Spatial Clue</h3>
+          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-primary max-w-2xl w-full space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border-subtle pb-3">
+              <h3 className="text-lg font-bold text-on-surface">Add New Spatial Clue</h3>
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/30 uppercase font-bold">
+                Waypoint #{course.clues.length + 1}
+              </span>
+            </div>
 
-            <form onSubmit={handleCreateClue} className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-on-surface-variant uppercase">Clue Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Catalina Hangar Foundation"
-                  value={newClueTitle}
-                  onChange={e => setNewClueTitle(e.target.value)}
-                  className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-sm text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
-                />
+            <form onSubmit={handleCreateClue} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Clue Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Catalina Hangar Foundation"
+                    value={newClueTitle}
+                    onChange={e => setNewClueTitle(e.target.value)}
+                    className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-sm text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Category</label>
+                  <select
+                    value={newClueCategory}
+                    onChange={e => setNewClueCategory(e.target.value)}
+                    className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
+                  >
+                    <option value="WW2 Heritage & Boating">WW2 Heritage & Boating</option>
+                    <option value="Maritime & Boating">Maritime & Boating</option>
+                    <option value="Historical GIS">Historical GIS</option>
+                    <option value="Visual AI">Visual AI</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-on-surface-variant uppercase">Category</label>
-                <select
-                  value={newClueCategory}
-                  onChange={e => setNewClueCategory(e.target.value)}
-                  className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
-                >
-                  <option value="WW2 Heritage & Boating">WW2 Heritage & Boating</option>
-                  <option value="Maritime & Boating">Maritime & Boating</option>
-                  <option value="Historical GIS">Historical GIS</option>
-                  <option value="Visual AI">Visual AI</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-on-surface-variant uppercase">Description / Clue Instructions</label>
+                <label className="text-xs font-bold text-on-surface-variant uppercase font-mono">Description / Clue Instructions</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Clue instructions for participants..."
                   value={newClueDesc}
                   onChange={e => setNewClueDesc(e.target.value)}
@@ -1181,12 +1503,70 @@ export default function CoursePlanner({
                 />
               </div>
 
+              {/* Interactive Search & Click/Drag Map Location Picker */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant uppercase flex justify-between items-center font-mono">
+                  <span>Target Location Map Search & Pin Placement</span>
+                  <span className="text-[10px] text-cyan-400 font-normal">Search place or click/drag marker on map</span>
+                </label>
+                <MapLocationPicker
+                  lat={parseFloat(newClueLat) || -33.0372}
+                  lng={parseFloat(newClueLng) || 151.5945}
+                  height="240px"
+                  onChangeLocation={({ lat, lng, addressName }) => {
+                    setNewClueLat(lat);
+                    setNewClueLng(lng);
+                    if (addressName && !newClueTitle) {
+                      setNewClueTitle(addressName.split(',')[0]);
+                    }
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-on-surface-variant uppercase flex justify-between items-center">
+                  <span>Location Reference Photo (What users see)</span>
+                  <span className="text-[10px] text-primary font-mono font-normal">Upload file or paste URL</span>
+                </label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="text"
+                    placeholder="Image URL or upload file..."
+                    value={newCluePhotoUrl}
+                    onChange={e => setNewCluePhotoUrl(e.target.value)}
+                    className="flex-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono"
+                  />
+                  <label className="px-3 py-2 rounded-lg bg-surface-container-high hover:bg-surface-variant text-primary border border-border-subtle text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1">
+                    <span>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setNewCluePhotoUrl(ev.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
+                {newCluePhotoUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border-subtle max-h-32">
+                    <img src={newCluePhotoUrl} alt="Location Preview" className="w-full h-32 object-cover" />
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-3 gap-3 font-mono">
                 <div>
                   <label className="text-xs font-bold text-on-surface-variant uppercase">Latitude</label>
                   <input
                     type="number"
-                    step="0.0001"
+                    step="0.000001"
                     value={newClueLat}
                     onChange={e => setNewClueLat(e.target.value)}
                     className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
@@ -1196,7 +1576,7 @@ export default function CoursePlanner({
                   <label className="text-xs font-bold text-on-surface-variant uppercase">Longitude</label>
                   <input
                     type="number"
-                    step="0.0001"
+                    step="0.000001"
                     value={newClueLng}
                     onChange={e => setNewClueLng(e.target.value)}
                     className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
@@ -1227,6 +1607,166 @@ export default function CoursePlanner({
                   className="px-6 py-2 rounded-full bg-primary text-on-primary font-bold text-xs uppercase shadow-md hover:bg-surface-tint cursor-pointer"
                 >
                   Save Waypoint
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* JSON Editor & Studio Modal */}
+      {isJsonModalOpen && (
+        <div className="fixed inset-0 z-50 bg-surface/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-950 p-6 rounded-2xl border border-cyan-500/40 max-w-3xl w-full space-y-4 shadow-2xl max-h-[90vh] flex flex-col text-slate-100 font-mono">
+            
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold uppercase">
+                  Course Schema JSON Studio
+                </span>
+                <h3 className="text-lg font-bold text-slate-100 mt-1">Import / Export Course JSON</h3>
+              </div>
+              <button
+                onClick={() => setIsJsonModalOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-slate-100 border border-slate-800 transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Copy, edit, or paste your complete course JSON below to update waypoints, coordinates, descriptions, and rules in bulk without adding points manually one by one.
+            </p>
+
+            {/* JSON Code Textarea */}
+            <div className="flex-1 min-h-[280px]">
+              <textarea
+                value={jsonInputText}
+                onChange={e => setJsonInputText(e.target.value)}
+                className="w-full h-full p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 custom-scrollbar leading-relaxed resize-none"
+                placeholder="Paste course JSON payload here..."
+              />
+            </div>
+
+            {/* Footer Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(jsonInputText);
+                    showToast("📋 Course JSON copied to clipboard!");
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">content_copy</span>
+                  Copy JSON
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportJson(course)}
+                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">download</span>
+                  Download .json
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsJsonModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const success = importCourseFromJson(jsonInputText);
+                    if (success) setIsJsonModalOpen(false);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider shadow-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">play_arrow</span>
+                  Apply & Build Challenge
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Edit Theme Modal */}
+      {editingThemeItem && (
+        <div className="fixed inset-0 z-50 bg-surface/85 backdrop-blur-sm flex items-center justify-center p-4 font-body">
+          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-primary max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border-subtle pb-3">
+              <h3 className="text-lg font-bold text-on-surface">Edit Location Theme</h3>
+              <button onClick={() => setEditingThemeItem(null)} className="p-1 text-on-surface-variant hover:text-on-surface">
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setAvailableThemes(availableThemes.map(t => t.name === editingThemeItem.originalName ? {
+                name: editingThemeItem.name,
+                icon: editingThemeItem.icon || 'auto_awesome',
+                desc: editingThemeItem.desc
+              } : t));
+              if (theme === editingThemeItem.originalName) {
+                setTheme(editingThemeItem.name);
+              }
+              showToast(`✏️ Updated theme "${editingThemeItem.name}"!`);
+              setEditingThemeItem(null);
+            }} className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-on-surface-variant uppercase">Theme Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingThemeItem.name}
+                  onChange={e => setEditingThemeItem({ ...editingThemeItem, name: e.target.value })}
+                  className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-sm text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-on-surface-variant uppercase font-mono">Material Icon Symbol Name</label>
+                <input
+                  type="text"
+                  value={editingThemeItem.icon}
+                  onChange={e => setEditingThemeItem({ ...editingThemeItem, icon: e.target.value })}
+                  className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs font-mono text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-on-surface-variant uppercase">Description</label>
+                <textarea
+                  rows={2}
+                  value={editingThemeItem.desc}
+                  onChange={e => setEditingThemeItem({ ...editingThemeItem, desc: e.target.value })}
+                  className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingThemeItem(null)}
+                  className="px-4 py-2 rounded-full border border-border-subtle text-xs font-semibold text-on-surface-variant cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs uppercase shadow-md hover:bg-surface-tint cursor-pointer"
+                >
+                  Save Theme
                 </button>
               </div>
             </form>

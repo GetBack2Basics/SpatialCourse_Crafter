@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navigation, Compass, MapPin, CheckCircle2, Clock, Users, ArrowUpRight, Camera, AlertCircle } from 'lucide-react';
+import { Navigation, Compass, MapPin, CheckCircle2, Clock, Users, ArrowUpRight, Camera, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import MapLibreView from '../map/MapLibreView';
 import SubmissionModal from './SubmissionModal';
 import { calculateHaversineDistance, calculateBearing, calculateAzimuth, calculateElevationAndGradient, getWaypointLabel } from '../../utils/geoUtils';
@@ -10,6 +10,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
   const [gpsError, setGpsError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalInitialMode, setModalInitialMode] = useState('GALLERY');
 
   const [inspectedPoint, setInspectedPoint] = useState(null);
 
@@ -25,7 +26,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
     data: activeClue
   };
 
-  // REAL Native HTML5 Geolocation Watcher
+  // Native HTML5 Geolocation Watcher
   useEffect(() => {
     if (!navigator.geolocation) {
       setGpsError("HTML5 Geolocation is not supported by your browser.");
@@ -37,7 +38,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
         setUserLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-          name: "Real Device Location"
+          name: "Device Location"
         });
         setGpsAccuracy(Math.round(position.coords.accuracy));
         setGpsError(null);
@@ -56,7 +57,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Calculate real Haversine distance, azimuth compass & terrain gradient Z
+  // Calculate Haversine distance, azimuth compass & terrain gradient Z
   const distanceToTarget = calculateHaversineDistance(
     userLocation.lat, userLocation.lng,
     currentTarget.lat, currentTarget.lng
@@ -78,11 +79,11 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
   return (
     <div className="space-y-6">
       
-      {/* Real HTML5 Geolocation Status Bar */}
+      {/* HTML5 Geolocation Status Bar */}
       <div className="glass-panel p-3.5 rounded-2xl border border-cyan-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-950/80">
         <div className="flex items-center gap-2 font-mono text-cyan-400">
           <Navigation className="w-4 h-4 text-cyan-400 animate-pulse" />
-          <span>REAL HTML5 GPS TRACKER:</span>
+          <span>HTML5 GPS TRACKER:</span>
           <span className="text-slate-200 font-bold">
             Lat {userLocation.lat.toFixed(5)}, Lng {userLocation.lng.toFixed(5)}
           </span>
@@ -125,6 +126,22 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               <p className="text-xs text-slate-400 mt-1">{activeClue.description}</p>
             </div>
 
+            {/* Location Reference Target Photo (What people will see at location) */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 group">
+              <img
+                src={activeClue.referencePhotoUrl || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600'}
+                alt={activeClue.title}
+                className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute bottom-2 left-2 right-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-mono text-cyan-300 border border-slate-800 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Location Reference
+                </span>
+                <span className="text-amber-300 font-bold uppercase">What You Will See</span>
+              </div>
+            </div>
+
             {/* Distance, Azimuth & Gradient Meter */}
             <div className="p-3.5 rounded-2xl bg-slate-950 border border-sky-500/40 space-y-3 font-mono">
               <div className="flex items-center justify-between">
@@ -158,20 +175,51 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               </div>
             </div>
 
-            {/* Geofence Unlock / Submission Button */}
-            {isWithinRadius ? (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-sm text-slate-950 shadow-lg shadow-emerald-500/25 animate-bounce flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Camera className="w-4 h-4" />
-                <span>Geofence Unlocked! ({distanceToTarget}m ≤ {activationRadiusMeters}m)</span>
-              </button>
-            ) : (
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center text-xs text-slate-400">
-                Move within <span className="text-cyan-400 font-mono font-bold">{activationRadiusMeters}m</span> of target coordinates to unlock data collection.
-              </div>
-            )}
+            {/* Geofence Unlock / Submission Buttons */}
+            <div className="space-y-2">
+              {isWithinRadius ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      setModalInitialMode('CAMERA');
+                      setIsModalOpen(true);
+                    }}
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-sm text-slate-950 shadow-lg shadow-emerald-500/25 animate-bounce flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-slate-950" />
+                    <span>Geofence Unlocked! Take Photo ({distanceToTarget}m ≤ {activationRadiusMeters}m)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setModalInitialMode('GALLERY');
+                      setIsModalOpen(true);
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-850 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <ImageIcon className="w-4 h-4 text-cyan-400" />
+                    <span>Or Select Existing Photo from Phone Gallery / Laptop</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5 text-center">
+                  <div className="text-xs text-slate-400">
+                    Move within <span className="text-cyan-400 font-mono font-bold">{activationRadiusMeters}m</span> of target coordinates to unlock live camera capture.
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setModalInitialMode('GALLERY');
+                      setIsModalOpen(true);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-slate-950 hover:bg-slate-900 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                  >
+                    <Upload className="w-4 h-4 text-amber-400" />
+                    <span>Field Issue? Upload Gallery / Laptop Photo</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Clues List Drawer */}
@@ -253,6 +301,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
         userLocation={userLocation}
         team={activeTeam}
         isOpen={isModalOpen}
+        initialMode={modalInitialMode}
         onClose={() => setIsModalOpen(false)}
         onSubmit={onSubmitData}
       />

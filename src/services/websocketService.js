@@ -1,6 +1,6 @@
-// Real WebSocket Client Broadcaster & Local Listener Gateway
+// WebSocket Client Broadcaster & Local Listener Gateway
 
-class RealWebSocketService {
+class WebSocketService {
   constructor() {
     this.listeners = new Set();
     this.logs = [
@@ -8,16 +8,16 @@ class RealWebSocketService {
     ];
 
     this.socket = null;
-    this.connectRealWebSocket();
+    this.connectWebSocket();
   }
 
-  connectRealWebSocket(url) {
+  connectWebSocket(url) {
     try {
       const wsUrl = url || `ws://${window.location.hostname || 'localhost'}:8080/ws`;
       this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = () => {
-        this.emitLog('SYSTEM', 'Real WebSocket Connection Established with Node.js Server.');
+        this.emitLog('SYSTEM', 'WebSocket Connection Established with Node.js Server.');
       };
 
       this.socket.onmessage = (event) => {
@@ -41,7 +41,7 @@ class RealWebSocketService {
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
       return;
     }
-    this.connectRealWebSocket(url);
+    this.connectWebSocket(url);
   }
 
   disconnect() {
@@ -95,5 +95,6 @@ class RealWebSocketService {
   }
 }
 
-export const wsService = new RealWebSocketService();
+export const wsService = new WebSocketService();
 export const emitLog = (type, msg, details) => wsService.emitLog(type, msg, details);
+

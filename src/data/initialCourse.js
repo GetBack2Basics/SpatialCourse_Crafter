@@ -27,6 +27,7 @@ export const PRESET_COURSES = [
         points: 500,
         targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600",
         requiredAttributes: [
           { key: "slipway_condition", label: "Slipway Condition", type: "select", options: ["Good", "Fair", "Submerged"] }
         ],
@@ -42,6 +43,7 @@ export const PRESET_COURSES = [
         points: 750,
         targetRadiusMeters: 100,
         taskType: "POINT_CAPTURE",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600",
         requiredAttributes: [
           { key: "structure_type", label: "Heritage Structure", type: "select", options: ["Plaque", "Foundation", "Memorial Tree"] }
         ],
@@ -57,6 +59,7 @@ export const PRESET_COURSES = [
         points: 1000,
         targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
         requiredAttributes: [
           { key: "mooring_count", label: "Visible Boats/Moorings", type: "select", options: ["1-5", "5-10", "10+"] }
         ],
@@ -92,6 +95,7 @@ export const PRESET_COURSES = [
         points: 500,
         targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600",
         requiredAttributes: [
           { key: "sculpture_visible", label: "Woven Fish Visible", type: "select", options: ["Yes", "No"] }
         ],
@@ -107,6 +111,7 @@ export const PRESET_COURSES = [
         points: 750,
         targetRadiusMeters: 100,
         taskType: "POINT_CAPTURE",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=600",
         requiredAttributes: [
           { key: "tide_level", label: "Tide Level", type: "select", options: ["High", "Mid", "Low"] }
         ],
@@ -142,6 +147,7 @@ export const PRESET_COURSES = [
         points: 500,
         targetRadiusMeters: 100,
         taskType: "PHOTO_VALIDATION",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600",
         requiredAttributes: [
           { key: "reflection_visible", label: "Water Reflection", type: "select", options: ["Yes", "No", "Partial"] }
         ],
@@ -157,6 +163,7 @@ export const PRESET_COURSES = [
         points: 750,
         targetRadiusMeters: 100,
         taskType: "AUDIO_VALIDATION",
+        referencePhotoUrl: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600",
         requiredAttributes: [
           { key: "floor_type", label: "Floor Surface", type: "select", options: ["Timber", "Stone", "Matting"] }
         ],

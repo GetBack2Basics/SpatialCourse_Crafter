@@ -468,9 +468,14 @@ export default function MapLibreView({
             .setLngLat([clue.targetLocation.lng, clue.targetLocation.lat])
             .setPopup(
               new maplibregl.Popup({ offset: 25 }).setHTML(`
-                <div class="p-1">
+                <div class="p-1 max-w-[220px]">
                   <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${clue.category}</span>
                   <h4 class="font-bold text-base mt-1 text-slate-100">Waypoint ${label}: ${clue.title}</h4>
+                  ${clue.referencePhotoUrl ? `
+                    <div className="my-2 rounded-lg overflow-hidden border border-slate-700">
+                      <img src="${clue.referencePhotoUrl}" alt="${clue.title}" class="w-full h-24 object-cover rounded-lg mt-1 border border-slate-700" />
+                    </div>
+                  ` : ''}
                   <p class="text-xs text-slate-300 mt-1">${clue.description}</p>
                   <div class="mt-2 text-xs font-mono text-cyan-400">Activation Zone: ${markerRadius}m</div>
                   <p class="text-[10px] text-cyan-400 mt-1 italic">Drag marker to reposition waypoint</p>

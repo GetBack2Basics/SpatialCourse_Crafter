@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import http from 'http';
 import path from 'path';
 import crypto from 'crypto';
+import fs from 'fs';
 
 const app = express();
 app.use(cors());
@@ -24,7 +25,7 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({
     type: 'SYSTEM',
     timestamp: new Date().toLocaleTimeString(),
-    message: 'Real WebSocket Connection Established with Node.js Server.'
+    message: 'WebSocket Connection Established with Node.js Server.'
   }));
 
   ws.on('close', () => {
@@ -71,6 +72,47 @@ app.post('/api/course', (req, res) => {
   currentCourse = req.body;
   broadcastLog('SYSTEM', `Course configuration updated: "${currentCourse.title}" (${currentCourse.clues.length} clues).`);
   res.json({ success: true, course: currentCourse });
+});
+
+// Gemini LLM Web Research & Course Generation Endpoint
+app.post('/api/generate-course', async (req, res) => {
+  const { theme, startLocation, finishLocation, durationMinutes = 60 } = req.body;
+  broadcastLog('AI_QA', `🤖 AI Web Research Request: Generating spatial course for theme "${theme}" between "${startLocation?.name}" and "${finishLocation?.name}"`);
+
+  if (!genAI) {
+    return res.status(400).json({ success: false, message: 'GEMINI_API_KEY not configured on server.' });
+  }
+
+  try {
+    // Load instruction prompt template from /src/llm_instructions/course_generator_llm.json
+    let courseInstructionFile = path.resolve('./src/llm_instructions/course_generator_llm.json');
+    let llmDoc = { name: 'course_generator_llm.json' };
+    if (fs.existsSync(courseInstructionFile)) {
+      llmDoc = JSON.parse(fs.readFileSync(courseInstructionFile, 'utf8'));
+    }
+
+    const template = llmDoc.promptTemplate || `Generate spatial challenge course for theme "{{theme}}" from {{startName}} to {{finishName}}.`;
+    const prompt = template
+      .replace(/{{theme}}/g, theme)
+      .replace(/{{startName}}/g, startLocation?.name || 'Start Location')
+      .replace(/{{startLat}}/g, startLocation?.lat)
+      .replace(/{{startLng}}/g, startLocation?.lng)
+      .replace(/{{finishName}}/g, finishLocation?.name || 'Finish Location')
+      .replace(/{{finishLat}}/g, finishLocation?.lat)
+      .replace(/{{finishLng}}/g, finishLocation?.lng)
+      .replace(/{{durationMinutes}}/g, durationMinutes);
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '');
+    const coursePayload = JSON.parse(responseText);
+
+    broadcastLog('AI_QA', `✨ Gemini AI Web Research completed using [${llmDoc.name}]: "${coursePayload.title}" (${coursePayload.clues?.length || 0} waypoints).`);
+    res.json({ success: true, course: coursePayload });
+  } catch (err) {
+    console.error("Gemini course generation error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.get('/api/submissions', (req, res) => {
@@ -122,7 +164,7 @@ app.post('/api/submissions/enqueue', async (req, res) => {
   }, 500);
 });
 
-// Day 1 Overnight Real Gemini AI Vision Validation (Cost Optimized)
+// Day 1 Overnight Gemini AI Vision Validation (Cost Optimized)
 app.post('/api/validate-ai', async (req, res) => {
   const { clueId, photoBase64, aiCriteria } = req.body;
 
@@ -139,7 +181,7 @@ app.post('/api/validate-ai', async (req, res) => {
     });
   }
 
-  broadcastLog('AI_QA', `Initiating real Gemini 1.5 Flash Vision AI evaluation...`);
+  broadcastLog('AI_QA', `Initiating Gemini 1.5 Flash Vision AI evaluation...`);
 
   if (!genAI) {
     broadcastLog('AI_QA', `Notice: GEMINI_API_KEY environment variable is missing. Set GEMINI_API_KEY to run live Gemini API calls.`);
@@ -185,9 +227,38 @@ app.post('/api/validate-ai', async (req, res) => {
   }
 });
 
-// Fallback route for SPA client-side routing
+// Fallback route for SPA client-side routing & server status
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve('dist', 'index.html'));
+  const distIndexPath = path.resolve('dist', 'index.html');
+  if (fs.existsSync(distIndexPath)) {
+    res.sendFile(distIndexPath);
+  } else {
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>SpatialCourse_Crafter Server</title>
+          <style>
+            body { font-family: system-ui, sans-serif; background: #090d16; color: #f1f5f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .card { background: #0f172a; border: 1px solid #1e293b; padding: 2rem; max-width: 500px; text-align: center; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+            h1 { color: #38bdf8; font-size: 1.5rem; margin-top: 0; }
+            p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; }
+            code { background: #1e293b; color: #38bdf8; padding: 0.2rem 0.5rem; border-radius: 0.25rem; font-family: monospace; }
+            a { color: #34d399; text-decoration: none; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>SpatialCourse_Crafter Server Active</h1>
+            <p>The Node.js API & WebSocket server is running on <code>port 8080</code>.</p>
+            <p><strong>To view the UI:</strong></p>
+            <p>• <strong>Development Mode:</strong> Open <a href="http://localhost:3000">http://localhost:3000</a> (run <code>npm run dev</code>)</p>
+            <p>• <strong>Production Mode:</strong> Run <code>npm run build</code> in your terminal to build static assets.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
 });
 
 const PORT = process.env.PORT || 8080;

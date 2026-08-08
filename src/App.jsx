@@ -7,6 +7,7 @@ import TerminalLogs from './components/common/TerminalLogs';
 
 import { PRESET_COURSES } from './data/initialCourse';
 import { wsService } from './services/websocketService';
+import { teamMergeService } from './services/teamMergeService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
@@ -46,24 +47,40 @@ export default function App() {
   const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState([]);
 
+  // Submissions state synced with teamMergeService
+  const [submissions, setSubmissions] = useState([]);
+
   // Active player team
-  const [activeTeam] = useState({ id: 'team-mango', name: 'Team Mango (NSW)' });
+  const [activeTeam] = useState({ id: 'team-mango', name: 'Team Mango (NSW)', members: ['Jordan', 'Taylor'] });
 
   useEffect(() => {
     // Connect to WebSocket server on mount
     wsService.connect('ws://localhost:8080/ws');
 
-    const unsubscribe = wsService.subscribe((logItems) => {
+    const unsubscribeWs = wsService.subscribe((logItems) => {
       setLogs(logItems);
     });
 
+    const unsubscribeMerge = teamMergeService.subscribe((subs) => {
+      setSubmissions(subs);
+    });
+
     return () => {
-      unsubscribe();
+      unsubscribeWs();
+      unsubscribeMerge();
     };
   }, []);
 
   const handleUpdateCourse = (updatedCourse) => {
-    setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
+    setCourses(prev => {
+      const exists = prev.some(c => c.id === updatedCourse.id);
+      if (exists) {
+        return prev.map(c => c.id === updatedCourse.id ? updatedCourse : c);
+      } else {
+        return [...prev, updatedCourse];
+      }
+    });
+    setSelectedCourseId(updatedCourse.id);
   };
 
   const handleCreateNewCourse = () => {
@@ -131,13 +148,20 @@ export default function App() {
           <ClueRunner
             course={activeCourse}
             activeTeam={activeTeam}
+            submissions={submissions}
           />
         )}
 
         {activeTab === 'SCORING' && (
           <Leaderboard
-            course={activeCourse}
-            activeTeam={activeTeam}
+            teams={[
+              activeTeam,
+              { id: 'team-wombat', name: 'Team Wombat (QLD)', members: ['Sarah', 'Ken'] },
+              { id: 'team-koala', name: 'Team Koala (VIC)', members: ['Alex', 'Mina'] }
+            ]}
+            submissions={submissions}
+            courseClues={activeCourse.clues}
+            onSubmissionsValidated={() => {}}
           />
         )}
       </main>

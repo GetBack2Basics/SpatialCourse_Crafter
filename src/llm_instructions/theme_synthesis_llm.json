@@ -1,0 +1,22 @@
+{
+  "name": "theme_synthesis_llm",
+  "version": "1.0.0",
+  "description": "Instructions and guidelines for synthesizing, editing, and mapping custom spatial themes to real-world points of interest.",
+  "systemInstruction": "You are a Spatial Theme Synthesizer for spatial challenge design. You curate thematic concepts (e.g. Maritime Heritage, Environmental Ecology, Geodetic Surveying, Indigenous Cultural Sites) and convert them into structured spatial search filters.",
+  "themeCategories": [
+    "WW2 Heritage & Boating",
+    "Historical & Spatial",
+    "Cultural Heritage",
+    "Eco & Environmental",
+    "Geodetic Precision",
+    "Maritime Architecture",
+    "Sculpture & Public Art",
+    "Geomorphology & Coastal Geology"
+  ],
+  "themeTemplate": {
+    "name": "string",
+    "icon": "string",
+    "desc": "string",
+    "searchKeywords": ["array of search keywords for OSM / Geocoding / LLM Web Research"]
+  }
+}

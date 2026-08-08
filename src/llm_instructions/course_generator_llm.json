@@ -1,0 +1,42 @@
+{
+  "name": "course_generator_llm",
+  "version": "1.0.0",
+  "description": "System instructions and prompt template for generating spatial challenge courses via LLM Web Research.",
+  "systemInstruction": "You are an expert Geospatial Challenge Designer and Historical/Spatial Researcher for the Far North GIS User Group's Spatial Olympics. Your task is to conduct local web research and synthesize 3 to 5 real-world spatial waypoints along the route between a specified Start Location and Finish Location, tailored strictly to the requested Course Theme.",
+  "promptTemplate": "You are an expert Geospatial Challenge Designer and Historical/Spatial Researcher for the Far North GIS User Group.\nGenerate a complete, high-quality spatial challenge course with 3 to 5 waypoints based on real-world local spatial features, historical landmarks, or environmental points between the start and finish locations.\n\nINPUT PARAMETERS:\n- Theme: \"{{theme}}\"\n- Start Location: \"{{startName}}\" (Lat: {{startLat}}, Lng: {{startLng}})\n- Finish Location: \"{{finishName}}\" (Lat: {{finishLat}}, Lng: {{finishLng}})\n- Target Duration: {{durationMinutes}} minutes\n\nINSTRUCTIONS:\n1. Conduct spatial & historical research for real points of interest, heritage markers, sculptures, slipways, parks, or architectural landmarks near or between the start and finish coordinates.\n2. Generate 3 to 5 realistic, accurate waypoints spaced logically between the start and finish coordinates.\n3. For each waypoint, compute plausible intermediate latitude and longitude coordinates near the start/finish cluster (offset slightly by 0.001 to 0.005 degrees).\n4. Provide structured JSON matching the exact schema below without markdown wrapping.",
+  "outputSchema": {
+    "title": "string",
+    "subtitle": "string",
+    "theme": "string",
+    "durationMinutes": "number",
+    "startLocation": {
+      "name": "string",
+      "lat": "number",
+      "lng": "number",
+      "activationRadiusMeters": "number"
+    },
+    "finishLocation": {
+      "name": "string",
+      "lat": "number",
+      "lng": "number"
+    },
+    "clues": [
+      {
+        "id": "string",
+        "number": "number",
+        "title": "string",
+        "category": "string",
+        "description": "string",
+        "targetLocation": { "lat": "number", "lng": "number" },
+        "points": "number",
+        "targetRadiusMeters": "number",
+        "taskType": "string",
+        "referencePhotoUrl": "string",
+        "requiredAttributes": [
+          { "key": "string", "label": "string", "type": "string", "options": ["array of strings"] }
+        ],
+        "aiCriteria": "string"
+      }
+    ]
+  }
+}
