@@ -92,7 +92,7 @@ export default function CoursePlanner({
     setShowSuggestions(false);
   }, [course]);
 
-  // Real-time location search & autofill when typing 3+ characters in Start Location Name
+  // Real-time location search & autofill biased to user's region/state/country
   useEffect(() => {
     if (!startName || startName.trim().length < 3) {
       setLocationSuggestions([]);
@@ -101,13 +101,23 @@ export default function CoursePlanner({
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startName)}&limit=5`);
+        const lat = parseFloat(startLat) || -33.0372;
+        const lng = parseFloat(startLng) || 151.5945;
+        const xmin = (lng - 2.5).toFixed(4);
+        const ymin = (lat - 2.5).toFixed(4);
+        const xmax = (lng + 2.5).toFixed(4);
+        const ymax = (lat + 2.5).toFixed(4);
+        const viewboxParam = `&viewbox=${xmin},${ymin},${xmax},${ymax}&bounded=0`;
+
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(startName)}${viewboxParam}&limit=5`);
         if (res.ok) {
           const data = await res.json();
           const formatted = data.map(item => ({
             display_name: item.display_name,
             lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon)
+            lng: parseFloat(item.lon),
+            state: item.address?.state || item.address?.region || '',
+            country: item.address?.country || ''
           }));
           setLocationSuggestions(formatted);
         }
@@ -117,9 +127,9 @@ export default function CoursePlanner({
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [startName]);
+  }, [startName, startLat, startLng]);
 
-  // Real-time location search & autofill when typing 3+ characters in Finish Location Name
+  // Real-time location search & autofill biased to user's region/state/country
   useEffect(() => {
     if (!finishName || finishName.trim().length < 3) {
       setFinishLocationSuggestions([]);
@@ -128,13 +138,23 @@ export default function CoursePlanner({
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(finishName)}&limit=5`);
+        const lat = parseFloat(startLat) || -33.0372;
+        const lng = parseFloat(startLng) || 151.5945;
+        const xmin = (lng - 2.5).toFixed(4);
+        const ymin = (lat - 2.5).toFixed(4);
+        const xmax = (lng + 2.5).toFixed(4);
+        const ymax = (lat + 2.5).toFixed(4);
+        const viewboxParam = `&viewbox=${xmin},${ymin},${xmax},${ymax}&bounded=0`;
+
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(finishName)}${viewboxParam}&limit=5`);
         if (res.ok) {
           const data = await res.json();
           const formatted = data.map(item => ({
             display_name: item.display_name,
             lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon)
+            lng: parseFloat(item.lon),
+            state: item.address?.state || item.address?.region || '',
+            country: item.address?.country || ''
           }));
           setFinishLocationSuggestions(formatted);
         }
@@ -144,7 +164,7 @@ export default function CoursePlanner({
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [finishName]);
+  }, [finishName, startLat, startLng]);
 
   // Move Clue Up or Down in order
   const handleMoveClue = (clueId, direction) => {
