@@ -171,3 +171,76 @@ export function getWaypointLabel(index) {
   const second = String.fromCharCode(97 + (idx % 26));
   return `${first}${second}`;
 }
+
+/**
+ * Computes destination coordinate given start lat, lng, distance (meters), and bearing (degrees)
+ */
+export function destinationPoint(lat, lng, distanceMeters, bearingDegrees) {
+  const R = 6371000; // Earth radius in meters
+  const δ = distanceMeters / R;
+  const θ = bearingDegrees * (Math.PI / 180);
+  const φ1 = lat * (Math.PI / 180);
+  const λ1 = lng * (Math.PI / 180);
+
+  const φ2 = Math.asin(
+    Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
+  );
+  const λ2 = λ1 + Math.atan2(
+    Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+    Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+  );
+
+  return {
+    lat: φ2 * (180 / Math.PI),
+    lng: λ2 * (180 / Math.PI)
+  };
+}
+
+/**
+ * Generates an organic, irregular "blotch" polygon offset from the true pin center.
+ * The centroid is deliberately shifted 20-40% away from the actual lat/lng so players
+ * cannot locate the target pin by finding the geometric center of the shape.
+ */
+export function generateOffsetBlotchPolygon(lat, lng, radiusMeters = 80, numVertices = 12, seed = 0) {
+  // Pseudo-random helper from seed
+  const pseudoRand = (s) => {
+    const x = Math.sin(s) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Shift centroid 20% to 45% of radiusMeters in a pseudo-random direction
+  const offsetAngle = pseudoRand(seed + 1) * 360;
+  const offsetDist = radiusMeters * (0.2 + pseudoRand(seed + 2) * 0.25);
+  const offsetCentroid = destinationPoint(lat, lng, offsetDist, offsetAngle);
+
+  const ringCoordinates = [];
+  const step = 360 / numVertices;
+
+  for (let i = 0; i < numVertices; i++) {
+    const angle = i * step;
+    // Radial jitter between 0.65x and 1.35x radiusMeters
+    const jitter = 0.65 + pseudoRand(seed + i * 17) * 0.7;
+    const vertexDist = radiusMeters * jitter;
+    
+    const pt = destinationPoint(offsetCentroid.lat, offsetCentroid.lng, vertexDist, angle);
+    ringCoordinates.push([pt.lng, pt.lat]); // MapLibre / GeoJSON expects [lng, lat]
+  }
+
+  // Close polygon
+  ringCoordinates.push(ringCoordinates[0]);
+
+  return {
+    type: "Feature",
+    properties: {
+      isBlotch: true,
+      originalCenter: { lat, lng },
+      offsetCentroid: offsetCentroid,
+      radiusMeters
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [ringCoordinates]
+    }
+  };
+}
+

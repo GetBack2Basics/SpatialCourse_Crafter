@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { getWaypointLabel } from '../../utils/geoUtils';
+import { getWaypointLabel, generateOffsetBlotchPolygon } from '../../utils/geoUtils';
 
 const BASEMAPS = {
   osm: {
@@ -446,6 +446,17 @@ export default function MapLibreView({
           const label = getWaypointLabel(pt.index !== undefined ? pt.index : clue.number - 1);
           const isActive = clue.id === activeClueId;
           const isCompleted = submissions.some(s => s.clueId === clue.id);
+          const isMasked = Boolean(clue.maskCoordinates);
+
+          // If masked, offset marker placement to match offset blotch centroid so exact pin is hidden
+          let markerLat = clue.targetLocation.lat;
+          let markerLng = clue.targetLocation.lng;
+
+          if (isMasked) {
+            const blotch = generateOffsetBlotchPolygon(clue.targetLocation.lat, clue.targetLocation.lng, clue.targetRadiusMeters || 80, 12, pt.index || 1);
+            markerLat = blotch.properties.offsetCentroid.lat;
+            markerLng = blotch.properties.offsetCentroid.lng;
+          }
 
           const el = document.createElement('div');
           el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 font-mono ${
@@ -453,10 +464,12 @@ export default function MapLibreView({
               ? 'bg-emerald-500 text-white border-2 border-emerald-300'
               : isActive
               ? 'bg-sky-500 text-white border-2 border-white ring-4 ring-sky-400/40 animate-bounce'
+              : isMasked
+              ? 'bg-purple-900 text-purple-200 border-2 border-purple-400'
               : 'bg-slate-800 text-slate-200 border-2 border-slate-600'
           }`;
           el.innerText = label;
-          el.title = `Waypoint ${label} (Drag on map to reposition)`;
+          el.title = isMasked ? `Waypoint Zone ${label} (Exact Coordinates Masked)` : `Waypoint ${label} (Drag on map to reposition)`;
           el.onclick = () => {
             onSelectClue(clue.id);
             if (onInspectPoint) onInspectPoint(pt);
@@ -464,12 +477,15 @@ export default function MapLibreView({
 
           const markerRadius = clue.targetRadiusMeters || startLocation?.activationRadiusMeters || 100;
 
-          const marker = new maplibregl.Marker({ element: el, draggable: true })
-            .setLngLat([clue.targetLocation.lng, clue.targetLocation.lat])
+          const marker = new maplibregl.Marker({ element: el, draggable: !isMasked })
+            .setLngLat([markerLng, markerLat])
             .setPopup(
               new maplibregl.Popup({ offset: 25 }).setHTML(`
                 <div class="p-1 max-w-[220px]">
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${clue.category}</span>
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">${clue.category}</span>
+                    ${isMasked ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">MASKED ZONE</span>` : ''}
+                  </div>
                   <h4 class="font-bold text-base mt-1 text-slate-100">Waypoint ${label}: ${clue.title}</h4>
                   ${clue.referencePhotoUrl ? `
                     <div className="my-2 rounded-lg overflow-hidden border border-slate-700">
@@ -477,20 +493,26 @@ export default function MapLibreView({
                     </div>
                   ` : ''}
                   <p class="text-xs text-slate-300 mt-1">${clue.description}</p>
-                  <div class="mt-2 text-xs font-mono text-cyan-400">Activation Zone: ${markerRadius}m</div>
-                  <p class="text-[10px] text-cyan-400 mt-1 italic">Drag marker to reposition waypoint</p>
+                  <div class="mt-2 text-xs font-mono text-cyan-400">
+                    ${isMasked ? 'Offset Blotch Zone: ~' + markerRadius + 'm' : 'Activation Zone: ' + markerRadius + 'm'}
+                  </div>
+                  <p class="text-[10px] text-cyan-400 mt-1 italic">
+                    ${isMasked ? '🔍 Exact location masked! Search inside the organic blotch area.' : 'Drag marker to reposition waypoint'}
+                  </p>
                 </div>
               `)
             )
             .addTo(map);
 
-          marker.on('dragend', () => {
-            const lngLat = marker.getLngLat();
-            onUpdateClueLocation(clue.id, {
-              lat: parseFloat(lngLat.lat.toFixed(6)),
-              lng: parseFloat(lngLat.lng.toFixed(6))
+          if (!isMasked) {
+            marker.on('dragend', () => {
+              const lngLat = marker.getLngLat();
+              onUpdateClueLocation(clue.id, {
+                lat: parseFloat(lngLat.lat.toFixed(6)),
+                lng: parseFloat(lngLat.lng.toFixed(6))
+              });
             });
-          });
+          }
 
           markersRef.current.push(marker);
         }
@@ -588,6 +610,50 @@ export default function MapLibreView({
             paint: {
               'line-color': '#10b981',
               'line-width': 4
+            }
+          });
+        }
+      }
+
+      // C) Offset Blotch Accuracy Polygons Layer
+      const blotchFeatures = clues
+        .filter(c => c.maskCoordinates)
+        .map((clue, idx) => generateOffsetBlotchPolygon(
+          clue.targetLocation.lat,
+          clue.targetLocation.lng,
+          clue.targetRadiusMeters || 80,
+          12,
+          idx + 1
+        ));
+
+      if (blotchFeatures.length > 0) {
+        const blotchData = {
+          type: 'FeatureCollection',
+          features: blotchFeatures
+        };
+
+        if (map.getSource('blotch-source')) {
+          map.getSource('blotch-source').setData(blotchData);
+        } else {
+          map.addSource('blotch-source', { type: 'geojson', data: blotchData });
+          map.addLayer({
+            id: 'blotch-layer-fill',
+            type: 'fill',
+            source: 'blotch-source',
+            paint: {
+              'fill-color': '#a855f7',
+              'fill-opacity': 0.25
+            }
+          });
+          map.addLayer({
+            id: 'blotch-layer-stroke',
+            type: 'line',
+            source: 'blotch-source',
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: {
+              'line-color': '#c084fc',
+              'line-width': 2.5,
+              'line-dasharray': [3, 2]
             }
           });
         }

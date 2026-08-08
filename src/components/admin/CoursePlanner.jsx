@@ -1432,6 +1432,22 @@ export default function CoursePlanner({
                 </div>
               </div>
 
+              <div className="flex items-center gap-2 pt-2 p-2.5 rounded-xl bg-surface-container border border-border-subtle">
+                <input
+                  type="checkbox"
+                  id="maskCoordinatesEdit"
+                  checked={Boolean(editingClue.maskCoordinates)}
+                  onChange={e => setEditingClue({ ...editingClue, maskCoordinates: e.target.checked })}
+                  className="w-4 h-4 text-primary rounded focus:ring-primary bg-surface border-border-subtle cursor-pointer"
+                />
+                <label htmlFor="maskCoordinatesEdit" className="text-xs font-bold text-on-surface flex items-center justify-between w-full cursor-pointer">
+                  <span>Mask Coordinates (Display Offset Organic Blotch Zone)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-mono font-bold">
+                    BLOTCH ZONE MASK
+                  </span>
+                </label>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
