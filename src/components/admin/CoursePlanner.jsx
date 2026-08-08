@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import MapLibreView from '../map/MapLibreView';
 import MapLocationPicker from '../map/MapLocationPicker';
 import { wsService } from '../../services/websocketService';
+import { authService } from '../../services/authService';
 import { calculateHaversineDistance, parseCoordinates, getWaypointLabel } from '../../utils/geoUtils';
 import { generateCourseWithLLM } from '../../services/courseGeneratorService';
 
@@ -13,6 +14,10 @@ export default function CoursePlanner({
   onCreateNewCourse,
   onUpdateCourse
 }) {
+  const [, setAuthTick] = useState(0);
+  useEffect(() => {
+    return authService.subscribe(() => setAuthTick(t => t + 1));
+  }, []);
   const [title, setTitle] = useState(course.title);
   const [duration, setDuration] = useState(course.durationMinutes);
   const [theme, setTheme] = useState(course.theme);
