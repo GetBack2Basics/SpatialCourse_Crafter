@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Terminal, X, Trash2, CheckCircle2, AlertTriangle, Cpu, Radio, Layers } from 'lucide-react';
 
-export default function TerminalLogs({ isOpen, onClose, logs = [], onClear }) {
+export default function TerminalLogs({ isOpen = true, onClose, logs = [], onClear }) {
   const [filter, setFilter] = useState('ALL');
 
   if (!isOpen) return null;
@@ -62,7 +62,7 @@ export default function TerminalLogs({ isOpen, onClose, logs = [], onClear }) {
 
         {/* Filter Bar */}
         <div className="bg-slate-900/80 px-4 py-2 border-b border-slate-800/60 flex items-center gap-1.5 overflow-x-auto text-xs font-mono">
-          {['ALL', 'QUEUE', 'EXIF', 'SPATIAL', 'AI_QA', 'TEAM_MERGE'].map(type => (
+          {['ALL', 'SYSTEM', 'QUEUE', 'EXIF', 'SPATIAL', 'AI_QA', 'TEAM_MERGE', 'SUCCESS', 'ERROR'].map(type => (
             <button
               key={type}
               onClick={() => setFilter(type)}

@@ -85,6 +85,10 @@ class RealWebSocketService {
     }
   }
 
+  emit(type, message, details = null) {
+    this.emitLog(type, message, details);
+  }
+
   clear() {
     this.logs = [];
     this.listeners.forEach(cb => cb([]));

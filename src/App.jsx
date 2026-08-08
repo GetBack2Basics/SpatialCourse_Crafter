@@ -145,8 +145,10 @@ export default function App() {
       {/* WebSocket Logs Terminal Drawer */}
       {showLogs && (
         <TerminalLogs
+          isOpen={showLogs}
           logs={logs}
           onClose={() => setShowLogs(false)}
+          onClear={() => wsService.clear()}
         />
       )}
     </div>
