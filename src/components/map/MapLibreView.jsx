@@ -367,12 +367,8 @@ export default function MapLibreView({
 
         const clusterMarker = new maplibregl.Marker({ element: el })
           .setLngLat([avgLng, avgLat])
-          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(popupContent))
+          .setPopup(new maplibregl.Popup({ offset: 25, closeButton: true, closeOnClick: false }).setHTML(popupContent))
           .addTo(map);
-
-        el.onclick = () => {
-          clusterMarker.togglePopup();
-        };
 
         markersRef.current.push(clusterMarker);
       } else {
