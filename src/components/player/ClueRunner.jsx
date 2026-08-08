@@ -145,7 +145,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             <h4 className="font-bold text-sm text-slate-200">2km Course Clues List</h4>
             
             <div className="space-y-2">
-              {course.clues.map(c => {
+              {course.clues.map((c, idx) => {
                 const isCurrent = c.id === activeClue.id;
                 const isCompleted = submissions.some(s => s.clueId === c.id);
 

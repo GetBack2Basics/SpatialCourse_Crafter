@@ -857,7 +857,7 @@ export default function CoursePlanner({
                         <button
                           type="button"
                           onClick={() => setEditingClue({ ...clue })}
-                          title="Edit Waypoint & AI Criteria"
+                          title="Edit Waypoint & Verification Criteria"
                           className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-base">edit</span>
@@ -887,7 +887,7 @@ export default function CoursePlanner({
                       </div>
                       {clue.aiCriteria && (
                         <div className="text-text-secondary text-[10px] bg-surface-container-low p-2 rounded border border-border-subtle/50">
-                          <span className="font-bold text-primary">AI Criteria:</span> {clue.aiCriteria}
+                          <span className="font-bold text-primary">Criteria:</span> {clue.aiCriteria}
                         </div>
                       )}
                     </div>
@@ -1047,12 +1047,12 @@ export default function CoursePlanner({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-primary uppercase">AI Vision Verification Criteria Prompt</label>
+                <label className="text-xs font-bold text-primary uppercase">Vision Verification Criteria Prompt</label>
                 <textarea
                   rows={2}
                   value={editingClue.aiCriteria || ''}
                   onChange={e => setEditingClue({ ...editingClue, aiCriteria: e.target.value })}
-                  placeholder="Enter custom AI prompt criteria for evaluating photo submissions..."
+                  placeholder="Enter custom criteria for evaluating photo submissions..."
                   className="w-full mt-1 bg-surface rounded-lg px-3 py-2 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono"
                 />
               </div>

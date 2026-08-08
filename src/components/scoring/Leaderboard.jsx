@@ -42,11 +42,11 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
           <div>
             <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
               <Trophy className="w-4 h-4 text-amber-400 animate-pulse" />
-              <span>DAY 2 PARTICIPANT-DRIVEN AI SCORING STUDIO</span>
+              <span>DAY 2 PARTICIPANT-DRIVEN SCORING STUDIO</span>
             </div>
             <h2 className="text-2xl font-extrabold text-slate-100 mt-1">Spatial Olympics Leaderboard & Rule Engine</h2>
             <p className="text-slate-400 text-sm mt-1">
-              Teams vote & adjust scoring mechanism weights. GCP AI processes spatial metrics in minutes to yield transparent results.
+              Teams vote & adjust scoring mechanism weights. Automated engines process spatial metrics in minutes to yield transparent results.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
             className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 font-extrabold text-sm text-slate-950 shadow-lg shadow-amber-500/20 hover:scale-105 transition-all"
           >
             <Sparkles className="w-4 h-4 text-slate-950" />
-            <span>{isValidating ? 'Running GCP AI Batch...' : 'Run Day 1 AI Validation'}</span>
+            <span>{isValidating ? 'Running Validation Batch...' : 'Run Day 1 Validation'}</span>
           </button>
         </div>
       </div>
@@ -97,7 +97,7 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
 
             <div>
               <div className="flex justify-between text-xs font-semibold text-slate-300 mb-1">
-                <span>AI Photo Object Recognition</span>
+                <span>Photo Object Recognition</span>
                 <span className="font-mono text-purple-400">{ruleWeights.photoVerificationWeight}%</span>
               </div>
               <input
@@ -208,7 +208,7 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
                       <span className="text-cyan-400 font-bold">{teamRes.breakdown.spatialAccuracyScore}%</span>
                     </div>
                     <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block">AI Vision</span>
+                      <span className="text-[10px] text-slate-500 block">Vision QA</span>
                       <span className="text-purple-400 font-bold">{teamRes.breakdown.photoVerificationScore}%</span>
                     </div>
                     <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
@@ -217,9 +217,9 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
                     </div>
                   </div>
 
-                  {/* Explainable AI Rationale */}
+                  {/* Explainable Analysis Rationale */}
                   <div className="mt-3 text-[11px] text-slate-400 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/60 font-mono">
-                    <span className="text-amber-400 font-semibold">AI Analysis Rationale: </span>
+                    <span className="text-amber-400 font-semibold">Analysis Rationale: </span>
                     {teamRes.aiRationale}
                   </div>
 

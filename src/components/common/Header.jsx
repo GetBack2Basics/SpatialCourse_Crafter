@@ -48,7 +48,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
                 activeTab === 'SCORING' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              AI Leaderboard
+              Leaderboard
             </button>
 
             <button
@@ -138,8 +138,8 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
             >
               <span className="material-symbols-outlined text-[22px]">leaderboard</span>
               <div className="flex flex-col">
-                <span className="text-sm">AI Leaderboard</span>
-                <span className="text-[10px] opacity-75">Live Team Scores & AI Verification</span>
+                <span className="text-sm">Leaderboard</span>
+                <span className="text-[10px] opacity-75">Live Team Scores & Verification</span>
               </div>
             </button>
           </div>
