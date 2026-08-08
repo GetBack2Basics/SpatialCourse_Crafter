@@ -186,6 +186,75 @@ class AuthService {
     this.saveSession(null);
   }
 
+  // Admin User Profile Management
+  updateUserProfile(originalEmail, updatedFields = {}) {
+    if (!this.isAdmin()) {
+      throw new Error("Permission Denied: Only Admins can edit user profiles.");
+    }
+
+    const cleanOriginal = originalEmail.trim().toLowerCase();
+    const userIndex = this.users.findIndex(u => u.email.toLowerCase() === cleanOriginal);
+    if (userIndex === -1) {
+      throw new Error(`User with email "${originalEmail}" not found.`);
+    }
+
+    const targetUser = this.users[userIndex];
+    const isSuperAdminAccount = cleanOriginal === SUPER_ADMIN_EMAIL.toLowerCase();
+
+    // Only Super Admin can edit Super Admin account
+    if (isSuperAdminAccount && !this.isSuperAdmin()) {
+      throw new Error("Permission Denied: Only Super Admin can modify the primary Super Admin profile.");
+    }
+
+    // Role modification restricted to Super Admin
+    let newRole = targetUser.role;
+    if (updatedFields.role && updatedFields.role !== targetUser.role) {
+      if (!this.isSuperAdmin()) {
+        throw new Error("Permission Denied: Only Super Admin (coreagc@gmail.com) can change user roles.");
+      }
+      newRole = isSuperAdminAccount ? 'SUPER_ADMIN' : updatedFields.role;
+    }
+
+    const newEmail = updatedFields.email ? updatedFields.email.trim().toLowerCase() : targetUser.email;
+    
+    // Check if new email collides with another user
+    if (newEmail !== cleanOriginal && this.users.some(u => u.email.toLowerCase() === newEmail)) {
+      throw new Error(`Email "${newEmail}" is already in use by another account.`);
+    }
+
+    const updatedUser = {
+      ...targetUser,
+      name: updatedFields.name !== undefined ? updatedFields.name : targetUser.name,
+      email: newEmail,
+      role: newRole,
+      teamId: updatedFields.teamId !== undefined ? updatedFields.teamId : targetUser.teamId,
+      organization: updatedFields.organization !== undefined ? updatedFields.organization : targetUser.organization,
+      phone: updatedFields.phone !== undefined ? updatedFields.phone : targetUser.phone,
+      notes: updatedFields.notes !== undefined ? updatedFields.notes : targetUser.notes,
+      updatedAt: new Date().toISOString()
+    };
+
+    const updatedUsers = [...this.users];
+    updatedUsers[userIndex] = updatedUser;
+    this.saveUsers(updatedUsers);
+
+    // Update active session if editing currently logged-in user
+    if (this.currentUser && this.currentUser.email.toLowerCase() === cleanOriginal) {
+      this.saveSession(updatedUser);
+    }
+
+    // If email changed, update team member references
+    if (newEmail !== cleanOriginal) {
+      const updatedTeams = this.teams.map(team => ({
+        ...team,
+        members: team.members.map(m => m.toLowerCase() === cleanOriginal ? newEmail : m)
+      }));
+      this.saveTeams(updatedTeams);
+    }
+
+    return updatedUser;
+  }
+
   // Super Admin Role Assignment
   setRole(targetEmail, newRole) {
     if (!this.isSuperAdmin()) {

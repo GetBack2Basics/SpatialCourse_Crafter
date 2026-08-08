@@ -41,4 +41,32 @@ describe('Stage 4: Real Authentication & RBAC (coreagc@gmail.com Super Admin)', 
     expect(team.name).toBe('Team Platypus (TAS)');
     expect(team.members.length).toBe(2);
   });
+
+  it('should allow Admins to edit user profiles, emails, and details', () => {
+    authService.signIn('william.dean@fungis.org', 'William Dean');
+    authService.signIn('jordan@nsw.gov.au', 'Jordan');
+    
+    // Switch back to Admin
+    authService.signIn('william.dean@fungis.org', 'William Dean');
+
+    const updated = authService.updateUserProfile('jordan@nsw.gov.au', {
+      name: 'Jordan Smith',
+      email: 'jordan.smith@nsw.gov.au',
+      organization: 'NSW Spatial Services',
+      notes: 'Team Lead for Team Mango'
+    });
+
+    expect(updated).toBeDefined();
+    expect(updated.name).toBe('Jordan Smith');
+    expect(updated.email).toBe('jordan.smith@nsw.gov.au');
+    expect(updated.organization).toBe('NSW Spatial Services');
+    expect(updated.notes).toBe('Team Lead for Team Mango');
+
+    // Check team members list updated old email to new email
+    const mangoTeam = authService.teams.find(t => t.id === 'team-mango');
+    if (mangoTeam) {
+      expect(mangoTeam.members).toContain('jordan.smith@nsw.gov.au');
+      expect(mangoTeam.members).not.toContain('jordan@nsw.gov.au');
+    }
+  });
 });
