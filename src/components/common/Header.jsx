@@ -15,7 +15,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
   return (
     <>
       <header className="fixed top-0 w-full z-50 bg-theme-surface/90 backdrop-blur-xl shadow-lg border-b border-theme text-theme-main transition-colors duration-300">
-        <div className="h-16 max-w-[1440px] mx-auto px-margin-mobile lg:px-margin-desktop flex items-center justify-between">
+        <div className="h-16 w-full px-4 lg:px-8 flex items-center justify-between">
           
           {/* Logo & Title */}
           <div className="flex items-center gap-base cursor-pointer" onClick={() => handleTabChange('ADMIN')}>

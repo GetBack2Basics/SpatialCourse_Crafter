@@ -663,7 +663,7 @@ export default function CoursePlanner({
       )}
 
       {/* Top actions bar with Course Selector & New Course controls */}
-      <div className="w-full bg-surface-container-lowest shadow-sm z-10 px-margin-mobile lg:px-margin-desktop py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-subtle">
+      <div className="w-full bg-surface-container-lowest shadow-sm z-10 px-4 lg:px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-subtle">
         
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Spatial Olympics Course Wizard</h1>
@@ -764,7 +764,7 @@ export default function CoursePlanner({
       </div>
 
       {/* Main Content Area: Split Layout from Stitch code.html */}
-      <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1440px] mx-auto overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row w-full overflow-hidden">
         
         {/* LEFT COLUMN: Course Parameters & Clues */}
         <div className="w-full lg:w-[45%] flex flex-col overflow-y-auto bg-surface relative z-10 custom-scrollbar pb-24 lg:pb-0">
@@ -926,20 +926,20 @@ export default function CoursePlanner({
                 </div>
 
                 {/* Course Assigned Teams Selector */}
-                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-slate-900/80 space-y-2 font-mono text-xs">
+                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-theme-container-high space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between">
                     <label className="font-bold text-emerald-400 uppercase flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-base">groups</span>
                       <span>Assigned Competition Teams for Course</span>
                     </label>
-                    <span className="text-[10px] text-slate-400 font-normal">Check teams allowed to compete</span>
+                    <span className="text-[10px] text-theme-sub font-normal">Check teams allowed to compete</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
                     {authService.teams.map(team => {
                       const isAssigned = (team.assignedCourseIds || []).includes(course.id);
                       return (
                         <label key={team.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
-                          isAssigned ? 'bg-emerald-950/80 border-emerald-500 text-emerald-200' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                          isAssigned ? 'bg-emerald-950/80 border-emerald-500 text-emerald-200' : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
                         }`}>
                           <input
                             type="checkbox"
@@ -952,7 +952,7 @@ export default function CoursePlanner({
                               authService.assignCourseToTeams(course.id, updatedTeamIds);
                               showToast(`Updated assigned teams for course "${course.title}"!`);
                             }}
-                            className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-400"
+                            className="rounded border-theme bg-theme-surface text-emerald-500 focus:ring-emerald-400"
                           />
                           <span className="font-bold text-[11px] truncate">{team.name} ({team.members?.length || 0} members)</span>
                         </label>
@@ -1705,30 +1705,30 @@ export default function CoursePlanner({
 
       {/* JSON Editor & Studio Modal */}
       {isJsonModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-theme-surface/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
           <div
             style={{ transform: `translate(${jsonModalPos.x}px, ${jsonModalPos.y}px)` }}
-            className="bg-slate-950 p-5 sm:p-6 rounded-2xl border border-cyan-500/40 w-[94vw] max-w-6xl h-[88vh] flex flex-col shadow-2xl text-slate-100 font-mono transition-transform duration-75 select-text"
+            className="bg-theme-container p-5 sm:p-6 rounded-2xl border border-theme w-[94vw] max-w-6xl h-[88vh] flex flex-col shadow-2xl text-theme-main font-mono transition-colors duration-300 select-text"
           >
             
             {/* Draggable Header */}
             <div
               onMouseDown={handleJsonModalMouseDown}
-              className="flex items-center justify-between border-b border-slate-800 pb-3 cursor-move select-none"
+              className="flex items-center justify-between border-b border-theme pb-3 cursor-move select-none"
               title="Click and drag to move JSON Studio modal window"
             >
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-cyan-400 text-lg">drag_indicator</span>
+                <span className="material-symbols-outlined text-theme-primary text-lg">drag_indicator</span>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold uppercase tracking-wider">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-theme-primary/15 text-theme-primary border border-theme font-bold uppercase tracking-wider">
                       Course Schema JSON Studio
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-theme-container-high text-theme-sub border border-theme">
                       Draggable Studio Window
                     </span>
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-100 mt-1 flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-theme-main mt-1 flex items-center gap-2">
                     Import / Export Course JSON
                   </h3>
                 </div>
@@ -1737,19 +1737,19 @@ export default function CoursePlanner({
               <button
                 type="button"
                 onClick={() => setIsJsonModalOpen(false)}
-                className="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-theme-container-high text-theme-sub hover:text-theme-main hover:bg-theme-surface border border-theme transition-colors cursor-pointer"
                 title="Close JSON Studio"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
 
-            <div className="py-2.5 flex items-center justify-between gap-4 text-xs text-slate-400 select-none">
+            <div className="py-2.5 flex items-center justify-between gap-4 text-xs text-theme-sub select-none">
               <p>
                 Copy, edit, or paste your complete course JSON below to update waypoints, coordinates, descriptions, and rules in bulk without adding points manually one by one.
               </p>
               {jsonInputText && (
-                <div className="hidden md:flex items-center gap-3 text-[11px] font-mono text-cyan-400/80 bg-slate-900/80 px-3 py-1 rounded-lg border border-slate-800 shrink-0">
+                <div className="hidden md:flex items-center gap-3 text-[11px] font-mono text-theme-primary bg-theme-container-high px-3 py-1 rounded-lg border border-theme shrink-0">
                   <span>{jsonInputText.split('\n').length} lines</span>
                   <span>•</span>
                   <span>{jsonInputText.length.toLocaleString()} chars</span>
@@ -1762,14 +1762,14 @@ export default function CoursePlanner({
               <textarea
                 value={jsonInputText}
                 onChange={e => setJsonInputText(e.target.value)}
-                className="w-full h-full p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs sm:text-sm font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 custom-scrollbar leading-relaxed resize-y shadow-inner select-text"
+                className="w-full h-full p-4 rounded-xl bg-theme-surface border border-theme text-xs sm:text-sm font-mono text-theme-main focus:outline-none focus:border-theme-primary custom-scrollbar leading-relaxed resize-y shadow-inner select-text"
                 placeholder="Paste course JSON payload here..."
                 spellCheck={false}
               />
             </div>
 
             {/* Footer Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 select-none">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-theme select-none">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1777,7 +1777,7 @@ export default function CoursePlanner({
                     navigator.clipboard.writeText(jsonInputText);
                     showToast("📋 Course JSON copied to clipboard!");
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-3.5 py-2 rounded-xl bg-theme-container-high hover:bg-theme-surface text-theme-main border border-theme text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <span className="material-symbols-outlined text-sm">content_copy</span>
                   Copy JSON
@@ -1786,7 +1786,7 @@ export default function CoursePlanner({
                 <button
                   type="button"
                   onClick={() => handleExportJson(course)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-3.5 py-2 rounded-xl bg-theme-container-high hover:bg-theme-surface text-theme-primary border border-theme text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <span className="material-symbols-outlined text-sm">download</span>
                   Download .json
@@ -1797,7 +1797,7 @@ export default function CoursePlanner({
                 <button
                   type="button"
                   onClick={() => setIsJsonModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 text-xs font-semibold cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl bg-theme-container-high text-theme-sub hover:text-theme-main hover:bg-theme-surface border border-theme text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
@@ -1807,7 +1807,7 @@ export default function CoursePlanner({
                     const success = importCourseFromJson(jsonInputText);
                     if (success) setIsJsonModalOpen(false);
                   }}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 flex items-center gap-1.5 cursor-pointer transition-all"
+                  className="px-5 py-2 rounded-xl bg-theme-primary text-theme-surface font-extrabold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 flex items-center gap-1.5 cursor-pointer transition-all"
                 >
                   <span className="material-symbols-outlined text-sm">play_arrow</span>
                   Apply & Build Challenge
