@@ -72,6 +72,8 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     }
   };
 
+  const [emailIsSent, setEmailIsSent] = useState(false);
+
   const handleRequestCode = async (e) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -86,8 +88,9 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     try {
       const result = await authService.sendVerificationCode(emailInput);
       setSentCode(result.code);
+      setEmailIsSent(Boolean(result.emailSent));
       setAuthStep('VERIFY_CODE');
-      setSuccessMsg(`Verification code sent to ${emailInput}! Check your inbox or enter code below.`);
+      setSuccessMsg(result.message || `Verification code sent to ${emailInput}! Check your inbox or enter code below.`);
     } catch (err) {
       setErrorMsg(err.message);
     } finally {

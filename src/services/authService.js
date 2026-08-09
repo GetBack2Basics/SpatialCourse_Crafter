@@ -191,6 +191,9 @@ class AuthService {
     };
     this.pendingCodes.set(cleanEmail, record);
 
+    let emailSent = false;
+    let serverMessage = "";
+
     // Call backend API if running
     try {
       if (typeof fetch !== 'undefined') {
@@ -202,6 +205,8 @@ class AuthService {
         if (res.ok) {
           const data = await res.json();
           if (data.code) record.code = data.code;
+          emailSent = Boolean(data.emailSent);
+          serverMessage = data.message;
         }
       }
     } catch (e) {
@@ -212,7 +217,8 @@ class AuthService {
       success: true,
       email: cleanEmail,
       code: record.code,
-      message: `Verification code [${record.code}] sent to ${cleanEmail}`
+      emailSent,
+      message: serverMessage || `Verification code sent to ${cleanEmail}`
     };
   }
 

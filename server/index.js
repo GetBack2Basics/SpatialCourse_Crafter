@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import nodemailer from 'nodemailer';
 import http from 'http';
 import path from 'path';
 import crypto from 'crypto';
@@ -67,13 +68,80 @@ const aiResponseCache = new Map();
 let currentCourse = null;
 let submissionsStore = [];
 
-// In-Memory Verification Code Store for Email Auth
-const verificationCodes = new Map();
+// Real Email Transport Configuration (SMTP / Resend API)
+const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_HOST;
+const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
+const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+const resendApiKey = process.env.RESEND_API_KEY;
+
+let mailTransporter = null;
+if (smtpHost && smtpUser && smtpPass) {
+  mailTransporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPass }
+  });
+  console.log(`Configured SMTP Mail Transporter via ${smtpHost}:${smtpPort}`);
+}
+
+async function sendRealEmail(toEmail, code) {
+  const fromAddress = process.env.EMAIL_FROM || smtpUser || 'auth@fungis.org';
+  const subject = `Your Spatial Olympics Verification Code: ${code}`;
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #334155; border-radius: 16px; background-color: #090d16; color: #f8fafc;">
+      <h2 style="color: #38bdf8; margin-top: 0; font-size: 20px;">FunGIS Spatial Olympics Verification</h2>
+      <p style="font-size: 14px; color: #94a3b8; line-height: 1.5;">Use the 6-digit verification code below to complete your sign in and unlock team spatial challenges:</p>
+      <div style="background-color: #020617; border: 2px solid #0284c7; padding: 18px; text-align: center; border-radius: 12px; margin: 20px 0;">
+        <span style="font-family: monospace; font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #38bdf8;">${code}</span>
+      </div>
+      <p style="font-size: 12px; color: #64748b;">This verification code expires in 10 minutes. If you did not request this code, please ignore this email.</p>
+      <hr style="border: 0; border-top: 1px solid #1e293b; margin: 20px 0;" />
+      <p style="font-size: 11px; color: #475569; text-align: center;">FunGIS Spatial Olympics Platform &bull; Lake Macquarie, NSW</p>
+    </div>
+  `;
+
+  // Option 1: Send via Resend REST API if API Key is set
+  if (resendApiKey) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromAddress.includes('<') ? fromAddress : `Spatial Olympics <${fromAddress}>`,
+        to: [toEmail],
+        subject,
+        html: htmlBody
+      })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Resend API failed: ${errText}`);
+    }
+    return { provider: 'Resend API', to: toEmail };
+  }
+
+  // Option 2: Send via SMTP Transporter if configured
+  if (mailTransporter) {
+    await mailTransporter.sendMail({
+      from: fromAddress.includes('<') ? fromAddress : `Spatial Olympics <${fromAddress}>`,
+      to: toEmail,
+      subject,
+      html: htmlBody
+    });
+    return { provider: `SMTP (${smtpHost})`, to: toEmail };
+  }
+
+  throw new Error("No SMTP host / user or Resend API key configured on server.");
+}
 
 // REST API Endpoints
 
 // 1. Email Verification Code Send Endpoint
-app.post('/api/auth/send-code', (req, res) => {
+app.post('/api/auth/send-code', async (req, res) => {
   const { email } = req.body;
   if (!email || !email.includes('@')) {
     return res.status(400).json({ success: false, message: 'Invalid email address.' });
@@ -85,13 +153,26 @@ app.post('/api/auth/send-code', (req, res) => {
 
   verificationCodes.set(cleanEmail, { code, expiresAt, sentAt: new Date().toISOString() });
 
-  broadcastLog('SYSTEM', `🔑 Verification code generated for ${cleanEmail}. Verification Code: [${code}]`);
+  let emailSentStatus = false;
+  let emailDeliveryMsg = "";
+
+  try {
+    const delivery = await sendRealEmail(cleanEmail, code);
+    emailSentStatus = true;
+    emailDeliveryMsg = `Verification code sent to ${cleanEmail} via ${delivery.provider}! Check your inbox.`;
+    broadcastLog('SYSTEM', `📧 Real email dispatched to ${cleanEmail} via ${delivery.provider}. Code: [${code}]`);
+  } catch (err) {
+    console.warn("Real email dispatch notice:", err.message);
+    emailDeliveryMsg = `Notice: To receive emails directly in inbox, configure SMTP_HOST / SMTP_USER / SMTP_PASS or RESEND_API_KEY on Cloud Run. Verification Code: ${code}`;
+    broadcastLog('SYSTEM', `🔑 Real email dispatch notice for ${cleanEmail}: ${err.message}. Code: [${code}]`);
+  }
 
   res.json({
     success: true,
-    message: `Verification code sent to ${cleanEmail}`,
+    message: emailDeliveryMsg,
     email: cleanEmail,
-    code: code // Included for seamless verification UX & testing
+    emailSent: emailSentStatus,
+    code: code
   });
 });
 
