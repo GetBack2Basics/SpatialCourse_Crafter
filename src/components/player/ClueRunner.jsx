@@ -103,31 +103,31 @@ function DraggableBlock({
         zIndex: isDragging ? 50 : 20,
         transition: isDragging ? 'none' : 'transform 0.1s ease-out'
       }}
-      className={`relative bg-slate-950/60 backdrop-blur-md border border-cyan-400/40 shadow-2xl transition-all rounded-xl text-white ${
-        isDragging ? 'ring-2 ring-cyan-300 shadow-cyan-400/60' : ''
+      className={`relative bg-theme-container/90 backdrop-blur-md border border-theme shadow-2xl transition-colors duration-300 rounded-xl text-theme-main ${
+        isDragging ? 'ring-2 ring-theme-primary shadow-theme-primary/40' : ''
       } ${className}`}
     >
       {/* High Contrast Header Handle */}
       <div
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        className={`flex items-center justify-between px-3.5 py-2.5 border-b border-white/20 cursor-grab active:cursor-grabbing select-none bg-slate-900/80 hover:bg-slate-900 rounded-t-xl transition-colors ${
+        className={`flex items-center justify-between px-3.5 py-2.5 border-b border-theme cursor-grab active:cursor-grabbing select-none bg-theme-container-high/80 hover:bg-theme-container-high rounded-t-xl transition-colors ${
           isCollapsed ? 'border-b-0 rounded-b-xl' : ''
         }`}
       >
         <div className="flex items-center gap-2">
           {draggable && (
-            <span className="material-symbols-outlined text-slate-300 text-base hover:text-white">
+            <span className="material-symbols-outlined text-theme-sub text-base hover:text-theme-main">
               drag_indicator
             </span>
           )}
           {icon && (
-            <span className="material-symbols-outlined text-cyan-300 text-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <span className="material-symbols-outlined text-theme-primary text-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
               {icon}
             </span>
           )}
           {title && (
-            <span className="font-label-md text-label-md text-white uppercase font-extrabold tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+            <span className="font-label-md text-label-md text-theme-main uppercase font-extrabold tracking-wider text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
               {title}
             </span>
           )}
@@ -139,7 +139,7 @@ function DraggableBlock({
             <button
               onClick={resetPos}
               title="Reset Position"
-              className="text-white hover:text-cyan-300 text-[10px] font-extrabold uppercase font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-colors cursor-pointer"
+              className="text-theme-main hover:text-theme-primary text-[10px] font-extrabold uppercase font-mono px-2 py-0.5 rounded bg-theme-container hover:bg-theme-container-high border border-theme transition-colors cursor-pointer"
             >
               Reset
             </button>
@@ -149,7 +149,7 @@ function DraggableBlock({
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               title={isCollapsed ? "Expand" : "Collapse"}
-              className="text-white hover:text-cyan-300 transition-colors p-1 rounded hover:bg-slate-800 cursor-pointer"
+              className="text-theme-main hover:text-theme-primary transition-colors p-1 rounded hover:bg-theme-container-high cursor-pointer"
             >
               <span className="material-symbols-outlined text-base font-bold">
                 {isCollapsed ? 'unfold_more' : 'unfold_less'}
