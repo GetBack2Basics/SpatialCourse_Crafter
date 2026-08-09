@@ -153,27 +153,28 @@ app.post('/api/auth/send-code', async (req, res) => {
 
   verificationCodes.set(cleanEmail, { code, expiresAt, sentAt: new Date().toISOString() });
 
-  let emailSentStatus = false;
-  let emailDeliveryMsg = "";
-
   try {
     const delivery = await sendRealEmail(cleanEmail, code);
-    emailSentStatus = true;
-    emailDeliveryMsg = `Verification code sent to ${cleanEmail} via ${delivery.provider}! Check your inbox.`;
-    broadcastLog('SYSTEM', `📧 Real email dispatched to ${cleanEmail} via ${delivery.provider}. Code: [${code}]`);
+    broadcastLog('SYSTEM', `📧 Real email dispatched to ${cleanEmail} via ${delivery.provider}.`);
+    
+    // Return success WITHOUT exposing code to client
+    return res.json({
+      success: true,
+      message: `Verification code sent to ${cleanEmail}. Please check your email inbox.`,
+      email: cleanEmail,
+      emailSent: true
+    });
   } catch (err) {
-    console.warn("Real email dispatch notice:", err.message);
-    emailDeliveryMsg = `Notice: To receive emails directly in inbox, configure SMTP_HOST / SMTP_USER / SMTP_PASS or RESEND_API_KEY on Cloud Run. Verification Code: ${code}`;
-    broadcastLog('SYSTEM', `🔑 Real email dispatch notice for ${cleanEmail}: ${err.message}. Code: [${code}]`);
+    console.error("Real email dispatch error:", err.message);
+    broadcastLog('SYSTEM', `❌ Real email dispatch failed for ${cleanEmail}: ${err.message}`);
+    
+    // Delete un-sent code and return strict error to caller
+    verificationCodes.delete(cleanEmail);
+    return res.status(400).json({
+      success: false,
+      message: `Email dispatch failed: ${err.message}`
+    });
   }
-
-  res.json({
-    success: true,
-    message: emailDeliveryMsg,
-    email: cleanEmail,
-    emailSent: emailSentStatus,
-    code: code
-  });
 });
 
 // 2. Email Verification Code Confirm Endpoint

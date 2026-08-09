@@ -469,19 +469,6 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                       />
                     </div>
 
-                    {sentCode && (
-                      <div className="p-2 rounded-lg bg-sky-900/60 border border-sky-700/50 text-[10px] text-sky-200 flex items-center justify-between">
-                        <span>Demo / Auto Code: <strong className="font-mono text-cyan-300 text-xs">{sentCode}</strong></span>
-                        <button
-                          type="button"
-                          onClick={() => setCodeInput(sentCode)}
-                          className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold cursor-pointer"
-                        >
-                          Auto-Fill Code
-                        </button>
-                      </div>
-                    )}
-
                     <div className="flex gap-2 pt-1">
                       <button
                         type="button"

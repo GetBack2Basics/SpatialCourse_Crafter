@@ -177,48 +177,28 @@ class AuthService {
   }
 
   // 1. Send Email 6-Digit Verification Code / Link
+  // 1. Send Email 6-Digit Verification Code / Link via Real Mailer API
   async sendVerificationCode(email) {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       throw new Error("Please enter a valid email address.");
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const record = {
-      code,
-      email: cleanEmail,
-      expiresAt: Date.now() + 10 * 60 * 1000
-    };
-    this.pendingCodes.set(cleanEmail, record);
+    const res = await fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail })
+    });
 
-    let emailSent = false;
-    let serverMessage = "";
-
-    // Call backend API if running
-    try {
-      if (typeof fetch !== 'undefined') {
-        const res = await fetch('/api/auth/send-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.code) record.code = data.code;
-          emailSent = Boolean(data.emailSent);
-          serverMessage = data.message;
-        }
-      }
-    } catch (e) {
-      console.warn("Backend auth send-code fallback to local client verification code:", e);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Failed to send email to ${cleanEmail}.`);
     }
 
     return {
       success: true,
       email: cleanEmail,
-      code: record.code,
-      emailSent,
-      message: serverMessage || `Verification code sent to ${cleanEmail}`
+      message: data.message
     };
   }
 
@@ -231,45 +211,17 @@ class AuthService {
       throw new Error("Email and 6-digit verification code are required.");
     }
 
-    // Try backend verification first
-    try {
-      if (typeof fetch !== 'undefined') {
-        const res = await fetch('/api/auth/verify-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail, code: cleanCode })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            return this.signIn(cleanEmail);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Backend verify-code fallback to local verification:", e);
+    const res = await fetch('/api/auth/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, code: cleanCode })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Invalid verification code.");
     }
 
-    // Fallback local verification check
-    const record = this.pendingCodes.get(cleanEmail);
-    if (!record) {
-      // Fallback: accept 6-digit code if matches standard or generated code
-      if (cleanCode.length === 6 && /^\d+$/.test(cleanCode)) {
-        return this.signIn(cleanEmail);
-      }
-      throw new Error("No active verification code found for this email. Please request a new code.");
-    }
-
-    if (Date.now() > record.expiresAt) {
-      this.pendingCodes.delete(cleanEmail);
-      throw new Error("Verification code has expired. Please request a new code.");
-    }
-
-    if (record.code !== cleanCode) {
-      throw new Error("Invalid 6-digit verification code. Please check your email and try again.");
-    }
-
-    this.pendingCodes.delete(cleanEmail);
     return this.signIn(cleanEmail);
   }
 
