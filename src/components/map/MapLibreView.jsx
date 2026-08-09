@@ -555,14 +555,34 @@ export default function MapLibreView({
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
               'line-color': '#06b6d4',
-              'line-width': 3.5,
+              'line-width': 4,
               'line-dasharray': [2, 2]
+            }
+          });
+          map.addLayer({
+            id: 'los-arrows',
+            type: 'symbol',
+            source: 'los-source',
+            layout: {
+              'symbol-placement': 'line',
+              'symbol-spacing': 40,
+              'text-field': '▶',
+              'text-size': 16,
+              'text-keep-upright': false,
+              'text-allow-overlap': true,
+              'text-ignore-placement': true
+            },
+            paint: {
+              'text-color': '#22d3ee',
+              'text-opacity': 1.0,
+              'text-halo-color': '#083344',
+              'text-halo-width': 2
             }
           });
         }
       }
 
-      // B) Walking Route Polyline (Shown in Admin/Planner view, hidden in Runner view so players discover route sequence)
+      // B) Walking Route Polyline with Directional Arrows
       if (showRouteLine && startLocation && startLocation.lat && startLocation.lng && clues.length > 0) {
         const routeCoords = [
           [startLocation.lng, startLocation.lat],
@@ -598,7 +618,7 @@ export default function MapLibreView({
             paint: {
               'line-color': '#059669',
               'line-width': 8,
-              'line-opacity': 0.25
+              'line-opacity': 0.3
             }
           });
           map.addLayer({
@@ -609,7 +629,7 @@ export default function MapLibreView({
             paint: {
               'line-color': '#10b981',
               'line-width': 4,
-              'line-opacity': 0.5
+              'line-opacity': 0.7
             }
           });
           map.addLayer({
@@ -618,18 +638,18 @@ export default function MapLibreView({
             source: 'route-source',
             layout: {
               'symbol-placement': 'line',
-              'symbol-spacing': 50,
+              'symbol-spacing': 35,
               'text-field': '▶',
-              'text-size': 13,
+              'text-size': 16,
               'text-keep-upright': false,
               'text-allow-overlap': true,
               'text-ignore-placement': true
             },
             paint: {
-              'text-color': '#065f46',
-              'text-opacity': 0.5,
-              'text-halo-color': '#ffffff',
-              'text-halo-width': 1
+              'text-color': '#34d399',
+              'text-opacity': 0.95,
+              'text-halo-color': '#064e3b',
+              'text-halo-width': 2
             }
           });
         }

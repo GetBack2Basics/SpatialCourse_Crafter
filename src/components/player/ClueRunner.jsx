@@ -394,7 +394,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             activeClueId={activeClue.id}
             userLocation={userLocation}
             submissions={submissions}
-            showRouteLine={false}
+            showRouteLine={true}
             onSelectClue={handleClueSelect}
             onInspectPoint={(pt) => {
               setInspectedPoint(pt);
