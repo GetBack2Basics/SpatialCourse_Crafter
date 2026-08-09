@@ -58,7 +58,19 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Active team derived from auth state
-  const activeTeam = { id: 'team-mango', name: 'Team Mango (NSW)', members: [currentUser?.email || 'Jordan', 'Taylor'] };
+  const activeTeam = { id: 'team-george-will', name: 'Far North GIS (George & Will)', members: ['coreagc@gmail.com', 'william.dean@fungis.org'] };
+
+  const handleDeleteCourse = (courseIdToDelete) => {
+    setCourses(prev => {
+      const filtered = prev.filter(c => c.id !== courseIdToDelete);
+      if (filtered.length > 0) {
+        setSelectedCourseId(filtered[0].id);
+        return filtered;
+      }
+      return prev;
+    });
+    wsService.emitLog('SYSTEM', `Admin deleted course ID: ${courseIdToDelete}`);
+  };
 
   useEffect(() => {
     // Apply initial theme from themeService
@@ -158,6 +170,7 @@ export default function App() {
             onSelectCourse={setSelectedCourseId}
             onCreateNewCourse={handleCreateNewCourse}
             onUpdateCourse={handleUpdateCourse}
+            onDeleteCourse={handleDeleteCourse}
           />
         )}
 

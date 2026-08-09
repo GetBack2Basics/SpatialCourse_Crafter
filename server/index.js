@@ -76,8 +76,25 @@ app.post('/api/course', (req, res) => {
 
 // Gemini LLM Web Research & Course Generation Endpoint
 app.post('/api/generate-course', async (req, res) => {
-  const { theme, startLocation, finishLocation, durationMinutes = 60 } = req.body;
-  broadcastLog('AI_QA', `🤖 AI Web Research Request: Generating spatial course for theme "${theme}" between "${startLocation?.name}" and "${finishLocation?.name}"`);
+  const { theme, startLocation, finishLocation, durationMinutes = 60, targetWaypointCount } = req.body;
+  
+  // Calculate target waypoint count if omitted
+  let finalWaypointCount = targetWaypointCount;
+  if (!finalWaypointCount) {
+    const sLat = parseFloat(startLocation?.lat ?? -33.0372);
+    const sLng = parseFloat(startLocation?.lng ?? 151.5945);
+    const fLat = parseFloat(finishLocation?.lat ?? -33.0395);
+    const fLng = parseFloat(finishLocation?.lng ?? 151.5960);
+    const R = 6371000;
+    const dLat = (fLat - sLat) * (Math.PI / 180);
+    const dLon = (fLng - sLng) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(sLat * (Math.PI / 180)) * Math.cos(fLat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const distMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.3; // 1.3 route winding factor
+    const walkMins = Math.ceil(distMeters / 80); // 80 m/min = 4.8 km/h
+    finalWaypointCount = Math.max(1, Math.floor(Math.max(0, parseInt(durationMinutes, 10) - walkMins) / 5));
+  }
+
+  broadcastLog('AI_QA', `🤖 AI Web Research Request: Generating spatial course (${finalWaypointCount} waypoints) for theme "${theme}" between "${startLocation?.name}" and "${finishLocation?.name}"`);
 
   if (!genAI) {
     return res.status(400).json({ success: false, message: 'GEMINI_API_KEY not configured on server.' });
@@ -91,7 +108,7 @@ app.post('/api/generate-course', async (req, res) => {
       llmDoc = JSON.parse(fs.readFileSync(courseInstructionFile, 'utf8'));
     }
 
-    const template = llmDoc.promptTemplate || `Generate spatial challenge course for theme "{{theme}}" from {{startName}} to {{finishName}}.`;
+    const template = llmDoc.promptTemplate || `Generate spatial challenge course with {{targetWaypointCount}} waypoints for theme "{{theme}}" from {{startName}} to {{finishName}}.`;
     const prompt = template
       .replace(/{{theme}}/g, theme)
       .replace(/{{startName}}/g, startLocation?.name || 'Start Location')
@@ -100,7 +117,8 @@ app.post('/api/generate-course', async (req, res) => {
       .replace(/{{finishName}}/g, finishLocation?.name || 'Finish Location')
       .replace(/{{finishLat}}/g, finishLocation?.lat)
       .replace(/{{finishLng}}/g, finishLocation?.lng)
-      .replace(/{{durationMinutes}}/g, durationMinutes);
+      .replace(/{{durationMinutes}}/g, durationMinutes)
+      .replace(/{{targetWaypointCount}}/g, finalWaypointCount);
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const result = await model.generateContent(prompt);

@@ -32,6 +32,7 @@ export default function MapLibreView({
   activeClueId = null,
   userLocation = null,
   submissions = [],
+  showRouteLine = true,
   onSelectClue = () => {},
   onUpdateStartLocation = () => {},
   onUpdateFinishLocation = () => {},
@@ -561,8 +562,8 @@ export default function MapLibreView({
         }
       }
 
-      // B) Walking Route Polyline
-      if (startLocation && startLocation.lat && startLocation.lng && clues.length > 0) {
+      // B) Walking Route Polyline (Shown in Admin/Planner view, hidden in Runner view so players discover route sequence)
+      if (showRouteLine && startLocation && startLocation.lat && startLocation.lng && clues.length > 0) {
         const routeCoords = [
           [startLocation.lng, startLocation.lat],
           ...clues.map(c => [c.targetLocation.lng, c.targetLocation.lat])
@@ -597,7 +598,7 @@ export default function MapLibreView({
             paint: {
               'line-color': '#059669',
               'line-width': 8,
-              'line-opacity': 0.35
+              'line-opacity': 0.25
             }
           });
           map.addLayer({
@@ -607,10 +608,36 @@ export default function MapLibreView({
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
               'line-color': '#10b981',
-              'line-width': 4
+              'line-width': 4,
+              'line-opacity': 0.5
+            }
+          });
+          map.addLayer({
+            id: 'route-arrows',
+            type: 'symbol',
+            source: 'route-source',
+            layout: {
+              'symbol-placement': 'line',
+              'symbol-spacing': 50,
+              'text-field': '▶',
+              'text-size': 13,
+              'text-keep-upright': false,
+              'text-allow-overlap': true,
+              'text-ignore-placement': true
+            },
+            paint: {
+              'text-color': '#065f46',
+              'text-opacity': 0.5,
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1
             }
           });
         }
+      } else if (!showRouteLine && map.getSource('route-source')) {
+        map.getSource('route-source').setData({
+          type: 'FeatureCollection',
+          features: []
+        });
       }
 
       // C) Offset Blotch Accuracy Polygons Layer

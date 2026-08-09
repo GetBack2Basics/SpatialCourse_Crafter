@@ -12,7 +12,7 @@ const TEAMS_STORAGE_KEY = 'fungis_spatial_olympics_teams_db';
 
 const SUPER_ADMIN_EMAIL = 'coreagc@gmail.com';
 
-// Initial users database with coreagc@gmail.com as Super Admin
+// Initial users database with coreagc@gmail.com as Super Admin and William Dean as Admin
 const INITIAL_USERS = [
   {
     email: SUPER_ADMIN_EMAIL,
@@ -22,31 +22,18 @@ const INITIAL_USERS = [
   },
   {
     email: 'william.dean@fungis.org',
-    name: 'William Dean (Admin)',
+    name: 'Will Dean (Admin)',
     role: 'ADMIN',
-    createdAt: new Date().toISOString()
-  },
-  {
-    email: 'jordan@nsw.gov.au',
-    name: 'Jordan (Team Mango)',
-    role: 'PLAYER',
-    teamId: 'team-mango',
     createdAt: new Date().toISOString()
   }
 ];
 
 const INITIAL_TEAMS = [
   {
-    id: 'team-mango',
-    name: 'Team Mango (NSW)',
-    members: ['jordan@nsw.gov.au', 'taylor@nsw.gov.au'],
-    assignedCourseIds: ['course-1', 'course-2']
-  },
-  {
-    id: 'team-wombat',
-    name: 'Team Wombat (QLD)',
-    members: ['sarah@qld.gov.au', 'ken@qld.gov.au'],
-    assignedCourseIds: ['course-1']
+    id: 'team-george-will',
+    name: 'Far North GIS (George & Will)',
+    members: ['coreagc@gmail.com', 'william.dean@fungis.org'],
+    assignedCourseIds: ['cairns-hilton-surveying']
   }
 ];
 
@@ -101,7 +88,12 @@ class AuthService {
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem(USERS_STORAGE_KEY);
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          // Retain only George Corea and Will Dean
+          const filtered = parsed.filter(u => u.email === SUPER_ADMIN_EMAIL || u.email === 'william.dean@fungis.org');
+          if (filtered.length > 0) return filtered;
+        }
       }
     } catch (e) {
       console.warn("Users DB load notice:", e);
@@ -124,7 +116,12 @@ class AuthService {
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem(TEAMS_STORAGE_KEY);
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.some(t => t.id === 'team-george-will')) {
+            return parsed;
+          }
+        }
       }
     } catch (e) {
       console.warn("Teams DB load notice:", e);

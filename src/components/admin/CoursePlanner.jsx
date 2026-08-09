@@ -3,7 +3,7 @@ import MapLibreView from '../map/MapLibreView';
 import MapLocationPicker from '../map/MapLocationPicker';
 import { wsService } from '../../services/websocketService';
 import { authService } from '../../services/authService';
-import { calculateHaversineDistance, parseCoordinates, getWaypointLabel } from '../../utils/geoUtils';
+import { calculateHaversineDistance, parseCoordinates, getWaypointLabel, calculateOptimalWaypointCount, optimizeRouteSequence } from '../../utils/geoUtils';
 import { generateCourseWithLLM } from '../../services/courseGeneratorService';
 
 export default function CoursePlanner({
@@ -12,7 +12,8 @@ export default function CoursePlanner({
   selectedCourseId,
   onSelectCourse,
   onCreateNewCourse,
-  onUpdateCourse
+  onUpdateCourse,
+  onDeleteCourse
 }) {
   const [, setAuthTick] = useState(0);
   useEffect(() => {
@@ -211,6 +212,19 @@ export default function CoursePlanner({
     showToast(`↔️ Waypoint #${moved.number} moved to position #${targetIndex + 1}!`);
   };
 
+  // Auto-optimize Route Sequence Order (Start -> Waypoints -> Finish)
+  const handleOptimizeRouteOrder = () => {
+    if (!course || !course.clues || course.clues.length <= 1) return;
+    const sorted = optimizeRouteSequence(
+      { lat: parseFloat(startLat), lng: parseFloat(startLng) },
+      course.clues,
+      { lat: parseFloat(finishLat), lng: parseFloat(finishLng) }
+    );
+    onUpdateCourse({ ...course, clues: sorted });
+    wsService.emitLog('SPATIAL', `Auto-sorted ${sorted.length} waypoints into optimal start-to-finish physical route sequence.`);
+    showToast(`🗺️ Auto-sorted waypoints into optimal start-to-finish physical route sequence!`);
+  };
+
   // Delete Clue
   const handleDeleteClue = (clueId) => {
     const clueToDelete = course.clues.find(c => c.id === clueId);
@@ -328,6 +342,20 @@ export default function CoursePlanner({
       setParsedNotice(`⚠️ Could not recognize coordinates. Paste "-33.0372, 151.5945", Google Maps URL, or GPS text.`);
     }
   };
+
+  const [customWaypointCount, setCustomWaypointCount] = useState('');
+
+  // Calculate optimal waypoint count based on duration, start & finish points, 5 mins stay, walking pace + incline
+  const optimalWaypointMetrics = useMemo(() => {
+    return calculateOptimalWaypointCount({
+      startLocation: { lat: parseFloat(startLat), lng: parseFloat(startLng) },
+      finishLocation: { lat: parseFloat(finishLat), lng: parseFloat(finishLng) },
+      durationMinutes: parseInt(duration, 10) || 60,
+      timePerWaypointMinutes: 5,
+      walkingSpeedKmH: 4.8,
+      requestedWaypointCount: customWaypointCount
+    });
+  }, [startLat, startLng, finishLat, finishLng, duration, customWaypointCount]);
 
   // Dynamically calculate Spatial Analysis metrics based on Start/Finish Location & Waypoints
   const courseMetrics = useMemo(() => {
@@ -542,7 +570,8 @@ export default function CoursePlanner({
         theme: selectedTheme,
         startLocation: { name: startName, lat: parseFloat(startLat), lng: parseFloat(startLng) },
         finishLocation: { name: finishName, lat: parseFloat(finishLat), lng: parseFloat(finishLng) },
-        durationMinutes: parseInt(duration, 10) || 60
+        durationMinutes: parseInt(duration, 10) || 60,
+        requestedWaypointCount: customWaypointCount
       });
 
       if (generated && generated.clues) {
@@ -743,7 +772,22 @@ export default function CoursePlanner({
             <span>JSON Studio</span>
           </button>
 
-          <div className="w-px h-6 bg-border-subtle hidden sm:block mx-1"></div>
+          {onDeleteCourse && courses.length > 1 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete course "${title}"?`)) {
+                  onDeleteCourse(course.id);
+                  showToast(`🗑️ Deleted course "${title}"`);
+                }
+              }}
+              className="h-9 px-3.5 rounded-full font-label-md text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer shadow-sm"
+              title="Delete Current Course"
+            >
+              <span className="material-symbols-outlined text-sm">delete</span>
+              <span>Delete</span>
+            </button>
+          )}
 
           <button
             onClick={handleDiscardDraft}
@@ -788,7 +832,7 @@ export default function CoursePlanner({
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <div className="relative group">
                     <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Duration (mins)</label>
                     <div className="relative">
@@ -803,7 +847,24 @@ export default function CoursePlanner({
                   </div>
 
                   <div className="relative group">
-                    <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Activation Distance (m)</label>
+                    <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Target Waypoints</label>
+                    <div className="relative">
+                      <input
+                        className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={customWaypointCount}
+                        onChange={e => setCustomWaypointCount(e.target.value)}
+                        placeholder="Auto (e.g. 10)"
+                      />
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400">pin_drop</span>
+                    </div>
+                    <p className="text-[11px] text-text-secondary mt-1 font-mono">Specify exact count (e.g. 10)</p>
+                  </div>
+
+                  <div className="relative group">
+                    <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Activation Radius (m)</label>
                     <div className="relative">
                       <input
                         className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
@@ -814,7 +875,7 @@ export default function CoursePlanner({
                       />
                       <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">radar</span>
                     </div>
-                    <p className="text-[11px] text-text-secondary mt-1 font-mono">Distance required to trigger waypoints (Default: 100m)</p>
+                    <p className="text-[11px] text-text-secondary mt-1 font-mono">Trigger radius (Default: 100m)</p>
                   </div>
                 </div>
 
@@ -958,6 +1019,50 @@ export default function CoursePlanner({
                         </label>
                       );
                     })}
+                  </div>
+                </div>
+
+                {/* Dynamic Waypoint Calculation & Spatial Pace Card */}
+                <div className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 space-y-3 font-mono text-xs shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-cyan-400 uppercase flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-base">route</span>
+                      <span>Spatial Pace & Waypoint Estimator</span>
+                    </label>
+                    <span className="text-[10px] bg-cyan-900/60 text-cyan-300 border border-cyan-700/50 px-2 py-0.5 rounded-full font-bold">
+                      {optimalWaypointMetrics.count} Waypoints Target
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                      <div className="text-[10px] text-text-secondary uppercase">Route Distance</div>
+                      <div className="font-bold text-on-surface text-sm">{(optimalWaypointMetrics.estimatedRouteMeters / 1000).toFixed(2)} km</div>
+                      <div className="text-[9px] text-text-secondary">({optimalWaypointMetrics.directDistanceMeters}m straight)</div>
+                    </div>
+                    
+                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                      <div className="text-[10px] text-text-secondary uppercase">Elevation Gain</div>
+                      <div className="font-bold text-amber-400 text-sm">+{optimalWaypointMetrics.elevationGainMeters}m</div>
+                      <div className="text-[9px] text-amber-500/80">+{optimalWaypointMetrics.inclinePenaltyMinutes}m incline penalty</div>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                      <div className="text-[10px] text-text-secondary uppercase">Walking Time</div>
+                      <div className="font-bold text-emerald-400 text-sm">{optimalWaypointMetrics.totalWalkMinutes} mins</div>
+                      <div className="text-[9px] text-emerald-500/80">@ 4.8 km/h pace</div>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                      <div className="text-[10px] text-text-secondary uppercase">Location Stay</div>
+                      <div className="font-bold text-cyan-300 text-sm">{optimalWaypointMetrics.count * 5} mins</div>
+                      <div className="text-[9px] text-cyan-400/80">5 mins / location</div>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-cyan-200/90 leading-tight pt-1 border-t border-cyan-800/40 flex items-center justify-between flex-wrap gap-1">
+                    <span>Target Duration: <strong>{duration} mins</strong></span>
+                    <span className="text-[10px] text-cyan-400 font-semibold">{optimalWaypointMetrics.summary}</span>
                   </div>
                 </div>
 
@@ -1130,13 +1235,25 @@ export default function CoursePlanner({
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">03</div>
                   <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues ({course.clues.length})</h2>
                 </div>
-                <button
-                  onClick={() => setIsAddingClue(true)}
-                  className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors shadow-sm cursor-pointer"
-                  title="Add New Spatial Waypoint"
-                >
-                  <span className="material-symbols-outlined">add</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOptimizeRouteOrder}
+                    className="h-9 px-3 rounded-full font-label-md text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all font-bold flex items-center gap-1.5 cursor-pointer shadow-sm font-mono"
+                    title="Auto-Sort Waypoints into Optimal Start-to-Finish Physical Walking Order"
+                  >
+                    <span className="material-symbols-outlined text-sm">alt_route</span>
+                    <span>Auto-Sort Route</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingClue(true)}
+                    className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+                    title="Add New Spatial Waypoint"
+                  >
+                    <span className="material-symbols-outlined text-base">add</span>
+                  </button>
+                </div>
               </div>
 
               {/* Waypoint Cards List with Move Up, Move Down, Edit & Delete */}
