@@ -31,6 +31,9 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsCameraActive(false);
   };
 
@@ -40,14 +43,27 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Live camera stream is not supported in this browser.");
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      }
+
       streamRef.current = stream;
+      setIsCameraActive(true);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(err => console.warn("Video stream play notice:", err));
       }
-      setIsCameraActive(true);
     } catch (err) {
       console.warn("Live camera stream notice:", err.message);
       setCameraError("Live camera feed unavailable. Tap below to launch your phone's native Camera app.");
@@ -55,14 +71,29 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     }
   };
 
+  // Sync stream with video element whenever stream or camera state updates
+  useEffect(() => {
+    if (isCameraActive && streamRef.current && videoRef.current) {
+      const video = videoRef.current;
+      if (video.srcObject !== streamRef.current) {
+        video.srcObject = streamRef.current;
+      }
+      video.play().catch(err => console.warn("Video stream play notice:", err));
+    }
+  }, [isCameraActive]);
+
   const capturePhoto = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    if (width === 0 || height === 0) return;
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, width, height);
     
     canvas.toBlob((blob) => {
       if (blob) {
@@ -363,22 +394,22 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
               </div>
             ) : uploadMode === 'CAMERA' ? (
               <div className="space-y-3">
-                {isCameraActive ? (
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-2xl bg-black">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-64 object-cover"
-                    />
-                    
-                    <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span>LIVE STREAM CAMERA</span>
-                    </div>
+                <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-2xl bg-black min-h-[16rem]">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-64 object-cover bg-black"
+                  />
+                  
+                  <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 z-10">
+                    <span className={`w-2 h-2 rounded-full ${isCameraActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
+                    <span>{isCameraActive ? 'LIVE STREAM CAMERA' : 'STARTING CAMERA...'}</span>
+                  </div>
 
-                    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 px-4">
+                  {isCameraActive && (
+                    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 px-4 z-10">
                       <button
                         type="button"
                         onClick={capturePhoto}
@@ -388,16 +419,18 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
                         <span>📸 SNAP PHOTO</span>
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="p-5 border border-amber-500/30 rounded-2xl bg-amber-950/20 text-center space-y-3 font-mono">
+                  )}
+                </div>
+
+                {cameraError && (
+                  <div className="p-4 border border-amber-500/30 rounded-2xl bg-amber-950/20 text-center space-y-2 font-mono">
                     <div className="text-xs text-amber-300 font-bold">
-                      {cameraError || "Preparing camera feed..."}
+                      {cameraError}
                     </div>
                     <button
                       type="button"
                       onClick={() => cameraInputRef.current?.click()}
-                      className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase transition-all shadow flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase transition-all shadow flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Camera className="w-4 h-4" />
                       <span>Launch Phone Camera App</span>
