@@ -179,6 +179,9 @@ export default function App() {
             course={activeCourse}
             activeTeam={activeTeam}
             submissions={submissions}
+            onSubmitData={(submissionPayload) => {
+              teamMergeService.submitClue(submissionPayload);
+            }}
           />
         )}
 

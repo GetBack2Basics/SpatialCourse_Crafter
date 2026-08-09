@@ -41,7 +41,7 @@ export default function ThemeSwitcher({ compact = false }) {
           activeTheme === THEMES.HIGH_CONTRAST
             ? 'bg-[#182203] border-[#C2EF73] text-[#C2EF73] shadow-[0_0_10px_rgba(194,239,115,0.2)]'
             : activeTheme === THEMES.STUDIO
-            ? 'bg-[#EFF4FF] border-[#1B365D]/30 text-[#1B365D] hover:border-[#1B365D]'
+            ? 'bg-[#EFF4FF] border-black/30 text-black hover:border-black'
             : 'bg-[#0b1c30] border-[#00F2FF]/30 text-[#00F2FF] hover:border-[#00F2FF]'
         }`}
         title="Switch theme (Field Dark, Studio Light, High Contrast)"
@@ -63,7 +63,7 @@ export default function ThemeSwitcher({ compact = false }) {
           activeTheme === THEMES.HIGH_CONTRAST
             ? 'bg-[#C2EF73]/20 border-[#C2EF73] text-[#C2EF73]'
             : activeTheme === THEMES.STUDIO
-            ? 'bg-[#1B365D]/15 border-[#1B365D]/40 text-[#1B365D]'
+            ? 'bg-black/10 border-black/40 text-black'
             : 'bg-[#00F2FF]/15 border-[#00F2FF]/40 text-[#00F2FF]'
         }`}>
           {currentConfig.shortName}
@@ -81,7 +81,7 @@ export default function ThemeSwitcher({ compact = false }) {
             activeTheme === THEMES.HIGH_CONTRAST
               ? 'bg-[#101501] border-[#C2EF73] text-white shadow-[0_0_20px_rgba(194,239,115,0.25)]'
               : activeTheme === THEMES.STUDIO
-              ? 'bg-[#F8F9FF] border-[#1B365D]/20 text-[#0F172A] shadow-xl'
+              ? 'bg-[#F8F9FF] border-black/20 text-black shadow-xl'
               : 'bg-[#031427] border-[#00F2FF]/30 text-white shadow-2xl'
           }`}
           role="menu"

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { parsePhotoExif } from '../../utils/geoUtils';
 import { queueService } from '../../services/queueService';
 import { Camera, Image as ImageIcon, Upload, MapPin, CheckCircle2, AlertTriangle, FileText, X } from 'lucide-react';
@@ -8,6 +8,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   const [exifData, setExifData] = useState(null);
   const [attributes, setAttributes] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState(null);
   
   // Gallery vs Camera upload mode
   const [uploadMode, setUploadMode] = useState(initialMode); // 'GALLERY' | 'CAMERA'
@@ -16,32 +17,115 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   const [locationSource, setLocationSource] = useState('DEVICE_GPS');
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Live Camera state
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const startCamera = async () => {
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Live camera stream is not supported in this browser.");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsCameraActive(true);
+    } catch (err) {
+      console.warn("Live camera stream notice:", err.message);
+      setCameraError("Live camera feed unavailable. Tap below to launch your phone's native Camera app.");
+      setIsCameraActive(false);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const objectUrl = URL.createObjectURL(blob);
+        const liveExif = {
+          lat: userLocation?.lat || clue.targetLocation.lat,
+          lng: userLocation?.lng || clue.targetLocation.lng,
+          timestamp: new Date().toISOString(),
+          device: 'Live Stream Camera (Verified GPS)'
+        };
+        setPhotoPreview(objectUrl);
+        setExifData(liveExif);
+        setLocationSource('EXIF');
+        setFormError(null);
+        stopCamera();
+      }
+    }, 'image/jpeg', 0.92);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setUploadMode(initialMode || 'GALLERY');
+      setFormError(null);
+    } else {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen, initialMode]);
+
+  useEffect(() => {
+    if (isOpen && uploadMode === 'CAMERA' && !photoPreview) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [isOpen, uploadMode, photoPreview]);
 
   if (!isOpen || !clue) return null;
 
   const processFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
+    setFormError(null);
+
+    const parsedExif = await parsePhotoExif(file);
+    if (!parsedExif || typeof parsedExif.lat !== 'number' || typeof parsedExif.lng !== 'number') {
+      setPhotoPreview(null);
+      setExifData(null);
+      setFormError("⚠️ Photo rejected! Uploaded image is missing mandatory EXIF GPS metadata. Please take a photo with GPS location tagging enabled on your camera, or use the Live Camera.");
+      return;
+    }
 
     const objectUrl = URL.createObjectURL(file);
     setPhotoPreview(objectUrl);
-
-    const parsedExif = await parsePhotoExif(file);
-    if (parsedExif && parsedExif.lat && parsedExif.lng) {
-      setExifData(parsedExif);
-      setLocationSource('EXIF'); // Automatically prefer EXIF coordinates from photo metadata if present
-    } else {
-      setExifData(null);
-      if (locationSource === 'EXIF') {
-        setLocationSource('DEVICE_GPS');
-      }
-    }
+    setExifData(parsedExif);
+    setLocationSource('EXIF'); // Automatically prefer EXIF coordinates from photo metadata
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) processFile(file);
+    e.target.value = '';
   };
 
   const handleDrop = (e) => {
@@ -80,8 +164,6 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     locationLabel = "Waypoint Target GPS";
   }
 
-  const [formError, setFormError] = useState(null);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     setFormError(null);
@@ -90,6 +172,11 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
 
     if (isGroupPhotoRequired && !photoPreview) {
       setFormError("⚠️ Mandatory Group Photo required! Please take or upload a photo showing all team members at this location.");
+      return;
+    }
+
+    if (photoPreview && (!exifData || typeof exifData.lat !== 'number' || typeof exifData.lng !== 'number')) {
+      setFormError("⚠️ Submission rejected! Uploaded photo is missing mandatory EXIF GPS metadata.");
       return;
     }
 
@@ -246,7 +333,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
             className="hidden"
           />
 
-          {/* 2. Photo Upload / Drop Zone */}
+          {/* 2. Photo Upload / Drop Zone / Live Viewfinder */}
           <div className="space-y-2">
             {photoPreview ? (
               <div className="relative rounded-2xl overflow-hidden border border-theme group">
@@ -274,18 +361,67 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
                   </div>
                 )}
               </div>
+            ) : uploadMode === 'CAMERA' ? (
+              <div className="space-y-3">
+                {isCameraActive ? (
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-2xl bg-black">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-64 object-cover"
+                    />
+                    
+                    <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span>LIVE STREAM CAMERA</span>
+                    </div>
+
+                    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 px-4">
+                      <button
+                        type="button"
+                        onClick={capturePhoto}
+                        className="px-6 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-extrabold text-sm shadow-xl flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Camera className="w-5 h-5" />
+                        <span>📸 SNAP PHOTO</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 border border-amber-500/30 rounded-2xl bg-amber-950/20 text-center space-y-3 font-mono">
+                    <div className="text-xs text-amber-300 font-bold">
+                      {cameraError || "Preparing camera feed..."}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase transition-all shadow flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Launch Phone Camera App</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-[11px] font-mono text-theme-sub px-1">
+                  <span>Need native app instead?</span>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="text-emerald-400 hover:underline font-bold"
+                  >
+                    📷 Open Phone Camera App Direct
+                  </button>
+                </div>
+              </div>
             ) : (
               <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                onClick={() => {
-                  if (uploadMode === 'CAMERA') {
-                    cameraInputRef.current?.click();
-                  } else {
-                    galleryInputRef.current?.click();
-                  }
-                }}
+                onClick={() => galleryInputRef.current?.click()}
                 className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center space-y-2 ${
                   isDragOver
                     ? 'border-theme-primary bg-theme-primary/10 scale-[0.99]'
@@ -293,12 +429,12 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
                 }`}
               >
                 <div className="w-12 h-12 rounded-2xl bg-theme-primary/15 text-theme-primary border border-theme flex items-center justify-center">
-                  {uploadMode === 'CAMERA' ? <Camera className="w-6 h-6" /> : <Upload className="w-6 h-6" />}
+                  <Upload className="w-6 h-6" />
                 </div>
 
                 <div>
                   <div className="text-xs font-bold text-theme-main">
-                    {uploadMode === 'CAMERA' ? 'Tap to Launch Phone Camera' : 'Click to Browse Gallery or Drag & Drop File'}
+                    Click to Browse Gallery / Laptop File or Drag & Drop
                   </div>
                   <div className="text-[11px] text-theme-sub mt-1 font-mono">
                     Supports JPG, PNG, HEIC from mobile photos or laptop disk
@@ -306,7 +442,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
                 </div>
 
                 <span className="inline-block px-3 py-1 rounded-full bg-theme-surface text-theme-primary border border-theme text-[10px] font-mono font-semibold mt-1">
-                  {uploadMode === 'CAMERA' ? '📷 Direct Camera Capture' : '🖼️ Gallery / Laptop Photo Picker'}
+                  🖼️ Gallery / File Picker
                 </span>
               </div>
             )}

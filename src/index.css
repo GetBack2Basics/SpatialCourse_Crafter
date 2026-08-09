@@ -35,18 +35,18 @@
   --theme-surface: #F8F9FF;
   --theme-surface-container: #EFF4FF;
   --theme-surface-container-high: #E2ECFF;
-  --theme-primary: #1B365D;
-  --theme-primary-container: rgba(27, 54, 93, 0.12);
+  --theme-primary: #000000;
+  --theme-primary-container: rgba(0, 0, 0, 0.08);
   --theme-secondary: #D97706;
   --theme-secondary-container: rgba(217, 119, 6, 0.12);
   --theme-success: #059669;
   --theme-success-container: rgba(5, 150, 105, 0.12);
-  --theme-text-primary: #0F172A;
-  --theme-text-secondary: #475569;
-  --theme-border: rgba(27, 54, 93, 0.15);
+  --theme-text-primary: #000000;
+  --theme-text-secondary: #000000;
+  --theme-border: rgba(0, 0, 0, 0.15);
   --theme-header-bg: rgba(248, 249, 255, 0.9);
   --theme-card-bg: #ffffff;
-  --theme-shadow: 0 10px 25px -5px rgba(27, 54, 93, 0.08);
+  --theme-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
   --theme-font-weight-headline: 600;
   --theme-font-weight-body: 400;
   --theme-radius: 8px; /* ROUND_FOUR */
