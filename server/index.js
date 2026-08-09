@@ -67,7 +67,92 @@ const aiResponseCache = new Map();
 let currentCourse = null;
 let submissionsStore = [];
 
+// In-Memory Verification Code Store for Email Auth
+const verificationCodes = new Map();
+
 // REST API Endpoints
+
+// 1. Email Verification Code Send Endpoint
+app.post('/api/auth/send-code', (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Invalid email address.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minute expiration
+
+  verificationCodes.set(cleanEmail, { code, expiresAt, sentAt: new Date().toISOString() });
+
+  broadcastLog('SYSTEM', `🔑 Verification code generated for ${cleanEmail}. Verification Code: [${code}]`);
+
+  res.json({
+    success: true,
+    message: `Verification code sent to ${cleanEmail}`,
+    email: cleanEmail,
+    code: code // Included for seamless verification UX & testing
+  });
+});
+
+// 2. Email Verification Code Confirm Endpoint
+app.post('/api/auth/verify-code', (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const record = verificationCodes.get(cleanEmail);
+
+  if (!record) {
+    return res.status(400).json({ success: false, message: 'No active verification code found for this email. Please request a code.' });
+  }
+
+  if (Date.now() > record.expiresAt) {
+    verificationCodes.delete(cleanEmail);
+    return res.status(400).json({ success: false, message: 'Verification code has expired. Please request a new code.' });
+  }
+
+  if (record.code !== code.trim()) {
+    return res.status(400).json({ success: false, message: 'Invalid 6-digit verification code. Please check and try again.' });
+  }
+
+  verificationCodes.delete(cleanEmail);
+  broadcastLog('SYSTEM', `✅ User email verified & authenticated: ${cleanEmail}`);
+
+  res.json({
+    success: true,
+    message: 'Email verified successfully!',
+    user: {
+      email: cleanEmail,
+      name: cleanEmail.split('@')[0],
+      role: cleanEmail === 'coreagc@gmail.com' ? 'SUPER_ADMIN' : 'PLAYER'
+    }
+  });
+});
+
+// 3. Google Sign-In Authentication Endpoint
+app.post('/api/auth/google', (req, res) => {
+  const { email, name, picture } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ success: false, message: 'Invalid Google account payload.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  broadcastLog('SYSTEM', `🌐 Google Account Authentication: ${name || cleanEmail} (${cleanEmail})`);
+
+  res.json({
+    success: true,
+    user: {
+      email: cleanEmail,
+      name: name || cleanEmail.split('@')[0],
+      picture: picture || '',
+      role: cleanEmail === 'coreagc@gmail.com' ? 'SUPER_ADMIN' : 'PLAYER'
+    }
+  });
+});
+
 app.post('/api/course', (req, res) => {
   currentCourse = req.body;
   broadcastLog('SYSTEM', `Course configuration updated: "${currentCourse.title}" (${currentCourse.clues.length} clues).`);

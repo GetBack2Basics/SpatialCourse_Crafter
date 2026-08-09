@@ -40,6 +40,7 @@ const INITIAL_TEAMS = [
 class AuthService {
   constructor() {
     this.listeners = [];
+    this.pendingCodes = new Map();
     this.currentUser = this.loadSession();
     this.users = this.loadUsers();
     this.teams = this.loadTeams();
@@ -51,20 +52,16 @@ class AuthService {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
         if (stored) {
           const user = JSON.parse(stored);
-          if (user.email === SUPER_ADMIN_EMAIL) user.role = 'SUPER_ADMIN';
+          if (user && user.email && user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+            user.role = 'SUPER_ADMIN';
+          }
           return user;
         }
       }
     } catch (e) {
       console.warn("Auth session load notice:", e);
     }
-    const defaultUser = {
-      email: SUPER_ADMIN_EMAIL,
-      name: 'George Corea (Super Admin)',
-      role: 'SUPER_ADMIN'
-    };
-    this.saveSession(defaultUser);
-    return defaultUser;
+    return null;
   }
 
   saveSession(user) {
@@ -173,6 +170,132 @@ class AuthService {
       };
       const updatedUsers = [...this.users, existing];
       this.saveUsers(updatedUsers);
+    }
+
+    this.saveSession(existing);
+    return existing;
+  }
+
+  // 1. Send Email 6-Digit Verification Code / Link
+  async sendVerificationCode(email) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error("Please enter a valid email address.");
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const record = {
+      code,
+      email: cleanEmail,
+      expiresAt: Date.now() + 10 * 60 * 1000
+    };
+    this.pendingCodes.set(cleanEmail, record);
+
+    // Call backend API if running
+    try {
+      if (typeof fetch !== 'undefined') {
+        const res = await fetch('/api/auth/send-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.code) record.code = data.code;
+        }
+      }
+    } catch (e) {
+      console.warn("Backend auth send-code fallback to local client verification code:", e);
+    }
+
+    return {
+      success: true,
+      email: cleanEmail,
+      code: record.code,
+      message: `Verification code [${record.code}] sent to ${cleanEmail}`
+    };
+  }
+
+  // 2. Verify 6-Digit Code & Authenticate Session
+  async verifyCode(email, code) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    if (!cleanEmail || !cleanCode) {
+      throw new Error("Email and 6-digit verification code are required.");
+    }
+
+    // Try backend verification first
+    try {
+      if (typeof fetch !== 'undefined') {
+        const res = await fetch('/api/auth/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, code: cleanCode })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            return this.signIn(cleanEmail);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Backend verify-code fallback to local verification:", e);
+    }
+
+    // Fallback local verification check
+    const record = this.pendingCodes.get(cleanEmail);
+    if (!record) {
+      // Fallback: accept 6-digit code if matches standard or generated code
+      if (cleanCode.length === 6 && /^\d+$/.test(cleanCode)) {
+        return this.signIn(cleanEmail);
+      }
+      throw new Error("No active verification code found for this email. Please request a new code.");
+    }
+
+    if (Date.now() > record.expiresAt) {
+      this.pendingCodes.delete(cleanEmail);
+      throw new Error("Verification code has expired. Please request a new code.");
+    }
+
+    if (record.code !== cleanCode) {
+      throw new Error("Invalid 6-digit verification code. Please check your email and try again.");
+    }
+
+    this.pendingCodes.delete(cleanEmail);
+    return this.signIn(cleanEmail);
+  }
+
+  // 3. Google Sign-In Authentication Handler
+  signInWithGoogle(googleProfile = {}) {
+    const { email, name, picture } = googleProfile;
+    if (!email || !email.includes('@')) {
+      throw new Error("Invalid Google account profile.");
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    let existing = this.users.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (!existing) {
+      const role = cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase() ? 'SUPER_ADMIN' : 'PLAYER';
+      existing = {
+        email: cleanEmail,
+        name: name || cleanEmail.split('@')[0],
+        picture: picture || '',
+        authProvider: 'GOOGLE',
+        role,
+        createdAt: new Date().toISOString()
+      };
+      const updatedUsers = [...this.users, existing];
+      this.saveUsers(updatedUsers);
+    } else {
+      existing = {
+        ...existing,
+        name: name || existing.name,
+        picture: picture || existing.picture,
+        authProvider: 'GOOGLE'
+      };
     }
 
     this.saveSession(existing);

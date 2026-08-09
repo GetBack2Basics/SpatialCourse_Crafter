@@ -55,7 +55,7 @@ export default function App() {
 
   // Authenticated User State & Modal State
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => !authService.getCurrentUser());
 
   // Active team derived from auth state
   const activeTeam = { id: 'team-george-will', name: 'Far North GIS (George & Will)', members: ['coreagc@gmail.com', 'william.dean@fungis.org'] };
@@ -73,6 +73,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Prompt sign in if user is not authenticated on load
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+    }
+
     // Apply initial theme from themeService
     themeService.applyTheme();
 
@@ -89,6 +94,7 @@ export default function App() {
 
     const unsubscribeAuth = authService.subscribe(({ currentUser: user }) => {
       setCurrentUser(user);
+      if (!user) setIsAuthModalOpen(true);
     });
 
     return () => {
