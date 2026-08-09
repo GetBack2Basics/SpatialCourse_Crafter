@@ -43,6 +43,10 @@ class TeamMergeService {
     this.notify();
   }
 
+  submitClue(submission) {
+    return this.addSubmission(submission);
+  }
+
   getTeamSubmissions(teamId) {
     return this.teamSubmissions.get(teamId) || [];
   }

@@ -195,6 +195,8 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     locationLabel = "Waypoint Target GPS";
   }
 
+  const modalContainerRef = useRef(null);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setFormError(null);
@@ -203,48 +205,59 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
 
     if (isGroupPhotoRequired && !photoPreview) {
       setFormError("⚠️ Mandatory Group Photo required! Please take or upload a photo showing all team members at this location.");
+      modalContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (photoPreview && (!exifData || typeof exifData.lat !== 'number' || typeof exifData.lng !== 'number')) {
       setFormError("⚠️ Submission rejected! Uploaded photo is missing mandatory EXIF GPS metadata.");
+      modalContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     setIsSubmitting(true);
 
-    const submissionPayload = {
-      id: `SUB-${Date.now()}`,
-      clueId: clue.id,
-      clueNumber: clue.number,
-      clueTitle: clue.title,
-      teamId: team.id,
-      teamName: team.name,
-      submittedBy: team?.members?.[0] || 'Field Agent',
-      capturedLocation: {
-        lat: finalLat,
-        lng: finalLng,
-        accuracy: locationSource === 'EXIF' ? 1.5 : locationSource === 'TARGET' ? 0.5 : 2.8,
-        source: locationSource
-      },
-      photoUrl: photoPreview || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400',
-      isGroupPhotoVerified: Boolean(photoPreview),
-      attributes: attributes,
-      submittedAt: new Date().toISOString(),
-      exifData: exifData,
-      uploadMode: uploadMode
-    };
+    try {
+      const submissionPayload = {
+        id: `SUB-${Date.now()}`,
+        clueId: clue.id,
+        clueNumber: clue.number,
+        clueTitle: clue.title,
+        teamId: team?.id || 'team-1',
+        teamName: team?.name || 'Field Agent Team',
+        submittedBy: team?.members?.[0] || 'Field Agent',
+        capturedLocation: {
+          lat: finalLat,
+          lng: finalLng,
+          accuracy: locationSource === 'EXIF' ? 1.5 : locationSource === 'TARGET' ? 0.5 : 2.8,
+          source: locationSource
+        },
+        photoUrl: photoPreview || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400',
+        isGroupPhotoVerified: Boolean(photoPreview),
+        attributes: attributes,
+        submittedAt: new Date().toISOString(),
+        exifData: exifData,
+        uploadMode: uploadMode
+      };
 
-    queueService.enqueueSubmission(submissionPayload, clue);
-    if (onSubmit) onSubmit(submissionPayload, clue);
+      queueService.enqueueSubmission(submissionPayload, clue);
+      if (onSubmit) {
+        onSubmit(submissionPayload, clue);
+      }
 
-    setIsSubmitting(false);
-    onClose();
+      setIsSubmitting(false);
+      onClose();
+    } catch (err) {
+      console.error("Submission processing error:", err);
+      setFormError(`⚠️ Submission error: ${err.message}`);
+      setIsSubmitting(false);
+      modalContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-theme-surface/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="glass-panel p-6 max-w-lg w-full border border-theme rounded-3xl max-h-[90vh] overflow-y-auto space-y-5 bg-theme-container text-theme-main shadow-2xl transition-colors duration-300">
+      <div ref={modalContainerRef} className="glass-panel p-6 max-w-lg w-full border border-theme rounded-3xl max-h-[90vh] overflow-y-auto space-y-5 bg-theme-container text-theme-main shadow-2xl transition-colors duration-300">
         
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-theme pb-4">
