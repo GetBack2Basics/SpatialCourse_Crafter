@@ -46,6 +46,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
   const [sentCode, setSentCode] = useState(null);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [emailIsSent, setEmailIsSent] = useState(false);
 
   if (!isOpen) return null;
 
@@ -71,8 +72,6 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
       setErrorMsg(err.message);
     }
   };
-
-  const [emailIsSent, setEmailIsSent] = useState(false);
 
   const handleRequestCode = async (e) => {
     e.preventDefault();

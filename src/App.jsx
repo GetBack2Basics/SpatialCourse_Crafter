@@ -15,6 +15,7 @@ import { themeService } from './services/themeService';
 import AuthModal from './components/common/AuthModal';
 import { authService } from './services/authService';
 
+
 export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -84,6 +85,7 @@ export default function App() {
   // Authenticated User State & Modal State
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => !authService.getCurrentUser());
+  const [realTeams, setRealTeams] = useState(() => authService.teams);
 
   // Active team derived from auth state
   const activeTeam = { id: 'team-george-will', name: 'Far North GIS (George & Will)', members: ['coreagc@gmail.com', 'william.dean@fungis.org'] };
@@ -110,7 +112,7 @@ export default function App() {
     themeService.applyTheme();
 
     // Connect to WebSocket server on mount
-    wsService.connect('ws://localhost:8080/ws');
+    wsService.connect(); // URL derived dynamically from window.location via Vite proxy
 
     const unsubscribeWs = wsService.subscribe((logItems) => {
       setLogs(logItems);
@@ -120,9 +122,10 @@ export default function App() {
       setSubmissions(subs);
     });
 
-    const unsubscribeAuth = authService.subscribe(({ currentUser: user }) => {
+    const unsubscribeAuth = authService.subscribe(({ currentUser: user, teams }) => {
       setCurrentUser(user);
       if (!user) setIsAuthModalOpen(true);
+      if (teams) setRealTeams(teams);
     });
 
     return () => {
@@ -225,14 +228,14 @@ export default function App() {
 
         {activeTab === 'SCORING' && (
           <Leaderboard
-            teams={[
-              activeTeam,
-              { id: 'team-wombat', name: 'Team Wombat (QLD)', members: ['Sarah', 'Ken'] },
-              { id: 'team-koala', name: 'Team Koala (VIC)', members: ['Alex', 'Mina'] }
-            ]}
-            submissions={submissions}
+            teams={realTeams}
+            submissions={[...submissions, ...localSubmissions]}
             courseClues={activeCourse.clues}
             onSubmissionsValidated={() => {}}
+            courses={courses}
+            selectedCourseId={selectedCourseId}
+            onSelectCourse={setSelectedCourseId}
+            activeCourse={activeCourse}
           />
         )}
       </main>

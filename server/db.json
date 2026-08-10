@@ -1,0 +1,50 @@
+{
+  "courses": [],
+  "teams": [
+    {
+      "id": "team-george-will",
+      "name": "Far North GIS (George & Will)",
+      "members": [
+        "coreagc@gmail.com",
+        "william.dean@fungis.org",
+        "participant.google@fungis.org"
+      ],
+      "assignedCourseIds": [
+        "cairns-hilton-surveying"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "email": "coreagc@gmail.com",
+      "name": "George Corea (Super Admin)",
+      "role": "SUPER_ADMIN",
+      "createdAt": "2026-08-10T17:30:03.730Z"
+    },
+    {
+      "email": "william.dean@fungis.org",
+      "name": "Will Dean (Admin)",
+      "role": "ADMIN",
+      "createdAt": "2026-08-10T17:30:03.735Z"
+    },
+    {
+      "email": "participant.google@fungis.org",
+      "name": "Google Authenticated User",
+      "picture": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
+      "authProvider": "GOOGLE",
+      "role": "PLAYER",
+      "createdAt": "2026-08-10T17:30:17.095Z",
+      "teamId": "team-george-will",
+      "assignedTeamIds": [
+        "team-george-will"
+      ],
+      "assignedCourseIds": [
+        "course-fungis-2026"
+      ],
+      "organization": "",
+      "notes": "",
+      "updatedAt": "2026-08-10T17:56:30.756Z"
+    }
+  ],
+  "submissions": []
+}

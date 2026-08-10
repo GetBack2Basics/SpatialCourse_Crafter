@@ -3,7 +3,16 @@ import confetti from 'canvas-confetti';
 import { DEFAULT_SCORING_RULES, calculateLeaderboard } from '../../services/scoringEngine';
 import { runDay1OvernightAIValidation } from '../../services/aiValidationService';
 
-export default function Leaderboard({ teams, submissions, courseClues, onSubmissionsValidated }) {
+export default function Leaderboard({
+  teams,
+  submissions,
+  courseClues,
+  onSubmissionsValidated,
+  courses = [],
+  selectedCourseId,
+  onSelectCourse,
+  activeCourse,
+}) {
   const [ruleWeights, setRuleWeights] = useState(DEFAULT_SCORING_RULES);
   const [vibePrompt, setVibePrompt] = useState('Reward group photo compliance and high spatial precision');
   const [isValidating, setIsValidating] = useState(false);
@@ -22,8 +31,19 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
     });
   };
 
-  // Calculate multi-factor leaderboard results
-  const leaderboard = calculateLeaderboard(teams, submissions, courseClues, ruleWeights, 60, vibePrompt);
+  // Calculate multi-factor leaderboard results from real data
+  const leaderboard = calculateLeaderboard(
+    teams,
+    submissions,
+    courseClues,
+    ruleWeights,
+    activeCourse?.durationMinutes || 60,
+    vibePrompt
+  );
+
+  // Teams that have at least one submission for this course
+  const teamsWithSubmissions = leaderboard.filter(t => t.cluesCompleted > 0);
+  const hasData = teamsWithSubmissions.length > 0;
 
   const handleSliderChange = (key, val) => {
     setRuleWeights(prev => ({
@@ -51,20 +71,12 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
-          {/* Animated scanline */}
-          <rect
-            width="100%"
-            height="2"
-            className="text-[#00e5ff] opacity-10"
-            style={{ animation: 'scan 8s linear infinite' }}
-            fill="currentColor"
-          />
         </svg>
       </div>
 
       {/* Main Content Container */}
       <div className="relative z-10 max-w-max-width mx-auto px-margin-mobile lg:px-margin-desktop py-8 sm:py-12 w-full space-y-12">
-        
+
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative">
           <div className="max-w-3xl">
@@ -75,11 +87,11 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
               </h2>
             </div>
             <h1 className="font-headline-xl text-headline-xl text-on-background mb-4 uppercase tracking-tighter">
-              Spatial Olympics '26 <br />
-              <span className="text-primary">Live Leaderboard &amp; Vibe-Coding Engine</span>
+              Live Leaderboard &amp;{' '}
+              <span className="text-primary">Vibe-Coding Engine</span>
             </h1>
             <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl leading-relaxed">
-              Live prompt-driven rule evaluation for workshop demonstrations. Adjust criteria weights or type vibe-coding prompts to tune winner selection on the fly.
+              Live prompt-driven rule evaluation. Adjust criteria weights or type vibe-coding prompts to tune winner selection on the fly.
             </p>
           </div>
 
@@ -91,16 +103,48 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
             <span className={`material-symbols-outlined group-hover:rotate-180 transition-transform duration-500 ${isValidating ? 'animate-spin' : ''}`}>
               {isValidating ? 'autorenew' : 'play_circle'}
             </span>
-            <span>{isValidating ? 'Processing Batch...' : 'Run Day 1 AI Validation'}</span>
+            <span>{isValidating ? 'Processing Batch...' : 'Run Validation'}</span>
           </button>
         </header>
 
+        {/* Project Selector */}
+        {courses.length > 0 && (
+          <section className="bg-surface-container rounded-2xl p-5 border border-outline-variant/30 shadow-md flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="material-symbols-outlined text-[#00e5ff] text-[20px]">folder_open</span>
+              <span className="font-label-md text-label-md text-on-surface uppercase tracking-wider">Project</span>
+            </div>
+            <div className="flex-1 w-full">
+              <select
+                value={selectedCourseId}
+                onChange={e => onSelectCourse && onSelectCourse(e.target.value)}
+                className="w-full bg-surface-container-highest border border-outline-variant/40 rounded-xl px-4 py-2.5 text-on-surface font-body-md focus:outline-none focus:ring-1 focus:ring-[#00e5ff] cursor-pointer"
+              >
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.title || c.id}
+                    {c.subtitle ? ` — ${c.subtitle}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {activeCourse && (
+              <div className="flex items-center gap-3 text-on-surface-variant font-body-sm shrink-0">
+                <span className="material-symbols-outlined text-[16px]">timer</span>
+                <span>{activeCourse.durationMinutes || 60} min</span>
+                <span className="material-symbols-outlined text-[16px] ml-2">pin_drop</span>
+                <span>{(activeCourse.clues || []).length} clues</span>
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Split View Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-          
+
           {/* Left Column: Vibe-Coding Studio */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            
+
             {/* Prompt Builder Panel */}
             <section className="bg-surface-container rounded-2xl p-6 relative overflow-hidden group border border-outline-variant/30 shadow-lg">
               <div className="absolute top-0 left-0 w-1 h-full bg-[#00e5ff]"></div>
@@ -140,7 +184,7 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
                 <span className="material-symbols-outlined text-[#ffb300] text-[18px]">tune</span>
                 Evaluation Criteria Weights
               </h3>
-              
+
               <div className="space-y-6">
                 {/* Weight Item 1: Spatial Precision */}
                 <div>
@@ -277,18 +321,35 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
                 </div>
               </h3>
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant/30">
-                {leaderboard.length} Teams Active
+                {teamsWithSubmissions.length} / {teams.length} Teams Active
               </span>
             </div>
 
-            {/* Team Cards */}
-            {leaderboard.map((teamRes) => {
+            {/* Empty State — no submissions yet */}
+            {!hasData && (
+              <div className="bg-surface-container rounded-2xl p-12 border border-outline-variant/20 flex flex-col items-center justify-center text-center gap-5 shadow-lg">
+                <span className="material-symbols-outlined text-[64px] text-on-surface-variant/30">leaderboard</span>
+                <div>
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-2">No Submissions Yet</h4>
+                  <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
+                    Leaderboard rankings will appear here once teams start submitting clue responses for{' '}
+                    <span className="text-on-surface font-semibold">{activeCourse?.title || 'this project'}</span>.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-on-surface-variant/60 font-label-sm text-label-sm mt-2">
+                  <span className="material-symbols-outlined text-[16px]">group</span>
+                  <span>{teams.length} team{teams.length !== 1 ? 's' : ''} registered</span>
+                  <span className="mx-2">·</span>
+                  <span className="material-symbols-outlined text-[16px]">pin_drop</span>
+                  <span>{(activeCourse?.clues || []).length} clues in course</span>
+                </div>
+              </div>
+            )}
+
+            {/* Team Cards — only shown when there are real submissions */}
+            {hasData && teamsWithSubmissions.map((teamRes) => {
               const isRank1 = teamRes.rank === 1;
               const isRank2 = teamRes.rank === 2;
-
-              let stateTag = 'NSW';
-              if (teamRes.teamName.includes('QLD')) stateTag = 'QLD';
-              else if (teamRes.teamName.includes('VIC')) stateTag = 'VIC';
 
               return (
                 <article
@@ -320,28 +381,21 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
                   <div className="pr-14 mb-5">
                     <h4 className="font-headline-lg text-headline-lg text-on-surface mb-2 flex items-center gap-3 flex-wrap">
                       {teamRes.teamName}
-                      <span
-                        className={`font-label-sm text-label-sm uppercase tracking-widest px-2.5 py-1 rounded-md border ${
-                          isRank1
-                            ? 'text-primary bg-primary/10 border-primary/20'
-                            : isRank2
-                            ? 'text-[#ffb300] bg-[#ffb300]/10 border-[#ffb300]/20'
-                            : 'text-[#00e5ff] bg-[#00e5ff]/10 border-[#00e5ff]/20'
-                        }`}
-                      >
-                        {stateTag}
-                      </span>
                     </h4>
                     <div className="flex gap-4 font-body-sm text-body-sm text-on-surface-variant items-center bg-surface-container-highest/50 inline-flex px-3 py-1.5 rounded-lg border border-outline-variant/20 flex-wrap">
                       <span className="flex items-center gap-1.5 text-on-surface">
                         <span className="material-symbols-outlined text-[18px] text-primary">check_circle</span>
                         {teamRes.cluesCompleted}/{teamRes.totalClues} Clues Done
                       </span>
-                      <span className="w-1 h-1 rounded-full bg-outline-variant hidden sm:inline-block"></span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[18px]">group</span>
-                        {teamRes.members?.join(', ') || 'No members listed'}
-                      </span>
+                      {teamRes.members?.length > 0 && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-outline-variant hidden sm:inline-block"></span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[18px]">group</span>
+                            {teamRes.members.join(', ')}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -395,6 +449,28 @@ export default function Leaderboard({ teams, submissions, courseClues, onSubmiss
                 </article>
               );
             })}
+
+            {/* Teams registered but no submissions — summary list */}
+            {hasData && leaderboard.filter(t => t.cluesCompleted === 0).length > 0 && (
+              <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/20 shadow">
+                <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">pending</span>
+                  Awaiting First Submission
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {leaderboard
+                    .filter(t => t.cluesCompleted === 0)
+                    .map(t => (
+                      <span
+                        key={t.teamId}
+                        className="px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-lg font-label-sm text-label-sm text-on-surface-variant"
+                      >
+                        {t.teamName}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

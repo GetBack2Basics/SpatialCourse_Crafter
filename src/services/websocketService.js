@@ -13,7 +13,11 @@ class WebSocketService {
 
   connectWebSocket(url) {
     try {
-      const wsUrl = url || `ws://${window.location.hostname || 'localhost'}:8080/ws`;
+      // Derive WS URL from the current page origin so it works on any port/host
+      // Vite proxies /ws → ws://localhost:8080/ws in dev, and in production
+      // the Node server serves both HTTP and WS on the same port.
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = url || `${proto}//${window.location.host}/ws`;
       this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = () => {
