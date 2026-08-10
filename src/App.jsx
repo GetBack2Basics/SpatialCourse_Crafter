@@ -4,6 +4,7 @@ import Footer from './components/common/Footer';
 import CoursePlanner from './components/admin/CoursePlanner';
 import ClueRunner from './components/player/ClueRunner';
 import Leaderboard from './components/scoring/Leaderboard';
+import { offlineStorage } from './services/offlineStorage';
 import TerminalLogs from './components/common/TerminalLogs';
 
 import { PRESET_COURSES } from './data/initialCourse';
@@ -50,8 +51,35 @@ export default function App() {
   const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState([]);
 
-  // Submissions state synced with teamMergeService
+  // Submissions state synced with teamMergeService (Cloud)
   const [submissions, setSubmissions] = useState([]);
+  
+  // Local submissions synced with offlineStorage (Device-first)
+  const [localSubmissions, setLocalSubmissions] = useState([]);
+
+  useEffect(() => {
+    offlineStorage.getPendingSubmissions().then(subs => setLocalSubmissions(subs));
+  }, []);
+
+  const handleSyncToCloud = async () => {
+    if (localSubmissions.length === 0) return;
+    try {
+      const res = await fetch('/api/submissions/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissions: localSubmissions })
+      });
+      if (res.ok) {
+        await offlineStorage.clearPendingSubmissions();
+        setLocalSubmissions([]);
+        wsService.emitLog('SYSTEM', 'Successfully synced local submissions to cloud.');
+        teamMergeService.fetchCloudSubmissions(); // Force immediate refresh
+      }
+    } catch (e) {
+      console.warn('Failed to sync to cloud', e);
+      wsService.emitLog('ERROR', 'Cloud sync failed. Submissions remain saved locally.');
+    }
+  };
 
   // Authenticated User State & Modal State
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
@@ -184,10 +212,14 @@ export default function App() {
           <ClueRunner
             course={activeCourse}
             activeTeam={activeTeam}
-            submissions={submissions}
+            submissions={[...submissions, ...localSubmissions]}
             onSubmitData={(submissionPayload) => {
-              teamMergeService.submitClue(submissionPayload);
+              offlineStorage.saveSubmission(submissionPayload).then(() => {
+                setLocalSubmissions(prev => [...prev, submissionPayload]);
+              });
             }}
+            pendingSyncCount={localSubmissions.length}
+            onSyncToCloud={handleSyncToCloud}
           />
         )}
 

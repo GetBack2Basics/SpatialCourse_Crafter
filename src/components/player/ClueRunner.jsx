@@ -165,7 +165,7 @@ function DraggableBlock({
   );
 }
 
-export default function ClueRunner({ course, activeTeam, submissions = [], onSubmitData }) {
+export default function ClueRunner({ course, activeTeam, submissions = [], onSubmitData, pendingSyncCount = 0, onSyncToCloud }) {
   const [activeClueId, setActiveClueId] = useState(course.clues[0]?.id);
   const [userLocation, setUserLocation] = useState(course.startLocation);
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
@@ -423,6 +423,19 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             <span className="material-symbols-outlined text-lg">my_location</span>
           </button>
         </div>
+
+        {/* Floating Sync Button */}
+        {pendingSyncCount > 0 && (
+          <div className="absolute top-4 right-3 z-20 flex flex-col items-end gap-2">
+            <button
+              onClick={onSyncToCloud}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-label-md font-extrabold py-2 px-4 rounded-full flex items-center gap-2 shadow-xl border border-emerald-300 transition-all cursor-pointer animate-pulse"
+            >
+              <span className="material-symbols-outlined text-lg">cloud_upload</span>
+              SYNC ({pendingSyncCount})
+            </button>
+          </div>
+        )}
 
         {/* Central Compass HUD */}
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">

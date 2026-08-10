@@ -64,9 +64,37 @@ if (geminiApiKey) {
 // COST OPTIMIZATION: In-Memory AI Evaluation Cache ($0 API cost on duplicate photos)
 const aiResponseCache = new Map();
 
-// In-Memory Database for Course & Submissions
-let currentCourse = null;
-let submissionsStore = [];
+// Local JSON Database wrapper
+const DB_FILE = path.resolve('./server/db.json');
+let dbCache = null;
+
+function getDB() {
+  if (dbCache) return dbCache;
+  if (fs.existsSync(DB_FILE)) {
+    try {
+      dbCache = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      // Ensure all arrays exist
+      dbCache.courses = dbCache.courses || [];
+      dbCache.teams = dbCache.teams || [];
+      dbCache.users = dbCache.users || [];
+      dbCache.submissions = dbCache.submissions || [];
+      return dbCache;
+    } catch (e) {
+      console.error("Failed to parse db.json, returning default", e);
+    }
+  }
+  dbCache = { courses: [], teams: [], users: [], submissions: [] };
+  return dbCache;
+}
+
+function saveDB(db) {
+  dbCache = db;
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
+// In-Memory Database for Course & Submissions (Migrated to getDB)
+let currentCourse = getDB().courses[0] || null;
+let submissionsStore = getDB().submissions;
 
 // Real Email Transport Configuration (SMTP / Resend API)
 const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_HOST;
@@ -235,10 +263,48 @@ app.post('/api/auth/google', (req, res) => {
   });
 });
 
-app.post('/api/course', (req, res) => {
-  currentCourse = req.body;
-  broadcastLog('SYSTEM', `Course configuration updated: "${currentCourse.title}" (${currentCourse.clues.length} clues).`);
-  res.json({ success: true, course: currentCourse });
+app.get('/api/courses', (req, res) => {
+  res.json({ success: true, courses: getDB().courses });
+});
+
+app.post('/api/courses', (req, res) => {
+  const course = req.body;
+  const db = getDB();
+  const existingIndex = db.courses.findIndex(c => c.id === course.id);
+  if (existingIndex >= 0) {
+    db.courses[existingIndex] = course;
+  } else {
+    db.courses.push(course);
+  }
+  saveDB(db);
+  currentCourse = course; // Keep legacy variable synced for now
+  broadcastLog('SYSTEM', `Course configuration updated: "${course.title}" (${course.clues?.length || 0} clues).`);
+  res.json({ success: true, course });
+});
+
+app.get('/api/teams', (req, res) => {
+  res.json({ success: true, teams: getDB().teams });
+});
+
+app.post('/api/teams', (req, res) => {
+  const teams = req.body; // Expecting full array for simplicity right now
+  const db = getDB();
+  db.teams = teams;
+  saveDB(db);
+  broadcastLog('SYSTEM', `Teams database updated.`);
+  res.json({ success: true, teams });
+});
+
+app.get('/api/users', (req, res) => {
+  res.json({ success: true, users: getDB().users });
+});
+
+app.post('/api/users', (req, res) => {
+  const users = req.body; // Expecting full array
+  const db = getDB();
+  db.users = users;
+  saveDB(db);
+  res.json({ success: true, users });
 });
 
 // Gemini LLM Web Research & Course Generation Endpoint
@@ -301,14 +367,43 @@ app.post('/api/generate-course', async (req, res) => {
 });
 
 app.get('/api/submissions', (req, res) => {
-  res.json(submissionsStore);
+  res.json({ success: true, submissions: getDB().submissions });
 });
 
-// Asynchronous Submission Job Queue API
+// Asynchronous Submission Job Queue API (Supports single or bulk uploads)
 app.post('/api/submissions/enqueue', async (req, res) => {
-  const { submission, clue } = req.body;
-  const jobId = `JOB-${Math.floor(100000 + Math.random() * 900000)}`;
+  const { submission, clue, submissions: bulkSubmissions } = req.body;
+  const db = getDB();
 
+  // Handle bulk array upload from offline runner
+  if (Array.isArray(bulkSubmissions)) {
+    const jobIds = [];
+    bulkSubmissions.forEach(sub => {
+      const jobId = `JOB-${Math.floor(100000 + Math.random() * 900000)}`;
+      jobIds.push(jobId);
+      
+      const enriched = {
+        ...sub,
+        jobId,
+        status: 'QUEUED_FOR_AI_OVERNIGHT',
+        createdAt: sub.createdAt || new Date().toISOString()
+      };
+      
+      const existingIdx = db.submissions.findIndex(s => s.id === sub.id);
+      if (existingIdx >= 0) {
+        db.submissions[existingIdx] = enriched;
+      } else {
+        db.submissions.push(enriched);
+      }
+      broadcastLog('TEAM_MERGE', `[Bulk Sync] Submissions consolidated for "${sub.teamName}".`);
+    });
+    
+    saveDB(db);
+    return res.json({ success: true, jobIds, message: 'Bulk submissions synced to cloud.' });
+  }
+
+  // Legacy single submission logic
+  const jobId = `JOB-${Math.floor(100000 + Math.random() * 900000)}`;
   res.json({ success: true, jobId, message: 'Submission queued asynchronously.' });
 
   // Async Execution Pipeline
@@ -344,7 +439,10 @@ app.post('/api/submissions/enqueue', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    submissionsStore.push(enriched);
+    const currentDb = getDB();
+    currentDb.submissions.push(enriched);
+    saveDB(currentDb);
+    
     broadcastLog('TEAM_MERGE', `[Job ${jobId}] Submission consolidated into team feature collection for "${submission.teamName}".`);
   }, 500);
 });

@@ -82,23 +82,35 @@ class AuthService {
   }
 
   loadUsers() {
+    // Initial optimistic load
+    let localUsers = INITIAL_USERS;
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem(USERS_STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          // Retain only George Corea and Will Dean
           const filtered = parsed.filter(u => u.email === SUPER_ADMIN_EMAIL || u.email === 'william.dean@fungis.org');
-          if (filtered.length > 0) return filtered;
+          if (filtered.length > 0) localUsers = filtered;
         }
       }
     } catch (e) {
       console.warn("Users DB load notice:", e);
     }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-    }
-    return INITIAL_USERS;
+    
+    // Async fetch from cloud
+    fetch('/api/users')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.users && data.users.length > 0) {
+          this.users = data.users;
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(data.users));
+          }
+          this.notify();
+        }
+      }).catch(err => console.warn('Cloud sync failed for users:', err));
+
+    return localUsers;
   }
 
   saveUsers(users) {
@@ -106,27 +118,47 @@ class AuthService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     }
+    
+    // Cloud sync
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(users)
+    }).catch(err => console.warn('Failed to sync users to cloud:', err));
+    
     this.notify();
   }
 
   loadTeams() {
+    let localTeams = INITIAL_TEAMS;
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem(TEAMS_STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.some(t => t.id === 'team-george-will')) {
-            return parsed;
+            localTeams = parsed;
           }
         }
       }
     } catch (e) {
       console.warn("Teams DB load notice:", e);
     }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TEAMS_STORAGE_KEY, JSON.stringify(INITIAL_TEAMS));
-    }
-    return INITIAL_TEAMS;
+
+    // Async fetch from cloud
+    fetch('/api/teams')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.teams && data.teams.length > 0) {
+          this.teams = data.teams;
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(TEAMS_STORAGE_KEY, JSON.stringify(data.teams));
+          }
+          this.notify();
+        }
+      }).catch(err => console.warn('Cloud sync failed for teams:', err));
+
+    return localTeams;
   }
 
   saveTeams(teams) {
@@ -134,6 +166,14 @@ class AuthService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(TEAMS_STORAGE_KEY, JSON.stringify(teams));
     }
+    
+    // Cloud sync
+    fetch('/api/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(teams)
+    }).catch(err => console.warn('Failed to sync teams to cloud:', err));
+
     this.notify();
   }
 
