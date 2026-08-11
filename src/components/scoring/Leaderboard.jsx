@@ -8,6 +8,7 @@ export default function Leaderboard({
   submissions,
   courseClues,
   onSubmissionsValidated,
+  onValidationStart,
   courses = [],
   selectedCourseId,
   onSelectCourse,
@@ -19,6 +20,7 @@ export default function Leaderboard({
 
   // Run Day 1 Overnight AI Batch Validation
   const handleTriggerAIValidation = async () => {
+    if (onValidationStart) onValidationStart(); // open logs terminal immediately
     setIsValidating(true);
     const validated = await runDay1OvernightAIValidation(submissions, courseClues);
     if (onSubmissionsValidated) onSubmissionsValidated(validated);

@@ -231,11 +231,21 @@ export default function App() {
             teams={realTeams}
             submissions={[...submissions, ...localSubmissions]}
             courseClues={activeCourse.clues}
-            onSubmissionsValidated={() => {}}
+            onSubmissionsValidated={(validated) => {
+              // Merge AI-enriched metrics back into cloud submissions state
+              setSubmissions(prev => {
+                const updatedIds = new Set(validated.map(v => v.id));
+                const unchanged = prev.filter(s => !updatedIds.has(s.id));
+                return [...unchanged, ...validated];
+              });
+              setShowLogs(true); // auto-open terminal so user can see AI progress
+              wsService.emitLog('SUCCESS', `AI Validation complete: ${validated.length} submission(s) scored.`);
+            }}
             courses={courses}
             selectedCourseId={selectedCourseId}
             onSelectCourse={setSelectedCourseId}
             activeCourse={activeCourse}
+            onValidationStart={() => setShowLogs(true)}
           />
         )}
       </main>
