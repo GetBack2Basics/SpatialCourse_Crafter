@@ -25,6 +25,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   const cameraInputRef = useRef(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const modalContainerRef = useRef(null);
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -194,8 +195,6 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     finalLng = clue.targetLocation.lng;
     locationLabel = "Waypoint Target GPS";
   }
-
-  const modalContainerRef = useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();

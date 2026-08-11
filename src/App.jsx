@@ -4,6 +4,8 @@ import Footer from './components/common/Footer';
 import CoursePlanner from './components/admin/CoursePlanner';
 import ClueRunner from './components/player/ClueRunner';
 import Leaderboard from './components/scoring/Leaderboard';
+import IssueTrackerPage from './components/admin/IssueTrackerPage';
+import HelpModal from './components/common/HelpModal';
 import { offlineStorage } from './services/offlineStorage';
 import TerminalLogs from './components/common/TerminalLogs';
 
@@ -20,8 +22,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = (params.get('tab') || params.get('mode') || '').toUpperCase();
-    if (['ADMIN', 'PLAYER', 'SCORING'].includes(tabParam)) {
+    if (['ADMIN', 'PLAYER', 'SCORING', 'ISSUES'].includes(tabParam)) {
       return tabParam;
+    }
+    if (['BUG', 'BUGS', 'TRACKER', 'BACKLOG'].includes(tabParam)) {
+      return 'ISSUES';
     }
     if (['RUNNER', 'CLUE_RUNNER', 'FIELD', 'MOBILE'].includes(tabParam)) {
       return 'PLAYER';
@@ -40,6 +45,9 @@ export default function App() {
       window.history.replaceState({}, '', url.toString());
     }
   };
+  
+  // Help Modal State
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   // List of all courses available
   const [courses, setCourses] = useState(PRESET_COURSES);
@@ -195,6 +203,7 @@ export default function App() {
         activeTeam={activeTeam}
         currentUser={currentUser}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenHelp={() => setIsHelpModalOpen(true)}
       />
 
       {/* Main Tab Content */}
@@ -248,6 +257,10 @@ export default function App() {
             onValidationStart={() => setShowLogs(true)}
           />
         )}
+
+        {activeTab === 'ISSUES' && (
+          <IssueTrackerPage />
+        )}
       </main>
 
       {/* Footer */}
@@ -258,6 +271,12 @@ export default function App() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         currentUser={currentUser}
+      />
+
+      {/* App Help & System Guide Modal */}
+      <HelpModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
       />
 
       {/* WebSocket Logs Terminal Drawer */}

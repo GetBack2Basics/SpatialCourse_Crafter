@@ -23,6 +23,76 @@ const BASEMAPS = {
   }
 };
 
+function ensureArrowIcons(map) {
+  if (!map.hasImage('route-arrow-icon')) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, 32, 32);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+
+    ctx.fillStyle = '#10b981';
+    ctx.strokeStyle = '#022c22';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(5, 5);
+    ctx.lineTo(27, 16);
+    ctx.lineTo(5, 27);
+    ctx.lineTo(11, 16);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    const imageData = ctx.getImageData(0, 0, 32, 32);
+    map.addImage('route-arrow-icon', {
+      width: 32,
+      height: 32,
+      data: imageData.data
+    });
+  }
+
+  if (!map.hasImage('los-arrow-icon')) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, 32, 32);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+
+    ctx.fillStyle = '#22d3ee';
+    ctx.strokeStyle = '#083344';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(5, 5);
+    ctx.lineTo(27, 16);
+    ctx.lineTo(5, 27);
+    ctx.lineTo(11, 16);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    const imageData = ctx.getImageData(0, 0, 32, 32);
+    map.addImage('los-arrow-icon', {
+      width: 32,
+      height: 32,
+      data: imageData.data
+    });
+  }
+}
+
 export default function MapLibreView({
   center = [145.7781, -16.9186], // [lng, lat] for MapLibre
   zoom = 15,
@@ -547,6 +617,7 @@ export default function MapLibreView({
         if (map.getSource('los-source')) {
           map.getSource('los-source').setData(losData);
         } else {
+          ensureArrowIcons(map);
           map.addSource('los-source', { type: 'geojson', data: losData });
           map.addLayer({
             id: 'los-layer',
@@ -566,17 +637,10 @@ export default function MapLibreView({
             layout: {
               'symbol-placement': 'line',
               'symbol-spacing': 40,
-              'text-field': '▶',
-              'text-size': 16,
-              'text-keep-upright': false,
-              'text-allow-overlap': true,
-              'text-ignore-placement': true
-            },
-            paint: {
-              'text-color': '#22d3ee',
-              'text-opacity': 1.0,
-              'text-halo-color': '#083344',
-              'text-halo-width': 2
+              'icon-image': 'los-arrow-icon',
+              'icon-size': 0.65,
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true
             }
           });
         }
@@ -593,22 +657,29 @@ export default function MapLibreView({
           routeCoords.push([finishLocation.lng, finishLocation.lat]);
         }
 
+        const legFeatures = [];
+        for (let i = 0; i < routeCoords.length - 1; i++) {
+          legFeatures.push({
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: [routeCoords[i], routeCoords[i + 1]]
+            },
+            properties: {
+              legIndex: i
+            }
+          });
+        }
+
         const routeData = {
           type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              geometry: {
-                type: 'LineString',
-                coordinates: routeCoords
-              }
-            }
-          ]
+          features: legFeatures
         };
 
         if (map.getSource('route-source')) {
           map.getSource('route-source').setData(routeData);
         } else {
+          ensureArrowIcons(map);
           map.addSource('route-source', { type: 'geojson', data: routeData });
           map.addLayer({
             id: 'route-layer-glow',
@@ -638,18 +709,11 @@ export default function MapLibreView({
             source: 'route-source',
             layout: {
               'symbol-placement': 'line',
-              'symbol-spacing': 35,
-              'text-field': '▶',
-              'text-size': 16,
-              'text-keep-upright': false,
-              'text-allow-overlap': true,
-              'text-ignore-placement': true
-            },
-            paint: {
-              'text-color': '#34d399',
-              'text-opacity': 0.95,
-              'text-halo-color': '#064e3b',
-              'text-halo-width': 2
+              'symbol-spacing': 45,
+              'icon-image': 'route-arrow-icon',
+              'icon-size': 0.65,
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true
             }
           });
         }

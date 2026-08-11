@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ThemeSwitcher from './ThemeSwitcher';
 
-export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, activeTeam, currentUser, onOpenAuthModal }) {
+export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, activeTeam, currentUser, onOpenAuthModal, onOpenHelp }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isSuperAdmin = currentUser && currentUser.email?.toLowerCase() === 'coreagc@gmail.com';
@@ -55,6 +55,15 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
             </button>
 
             <button
+              onClick={() => handleTabChange('ISSUES')}
+              className={`transition-colors uppercase text-label-md flex items-center gap-1.5 ${
+                activeTab === 'ISSUES' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
+              }`}
+            >
+              <span>Issue Tracker</span>
+            </button>
+
+            <button
               onClick={toggleLogs}
               className="font-label-md text-label-md text-theme-sub hover:text-theme-primary transition-colors uppercase flex items-center gap-1.5"
             >
@@ -62,6 +71,15 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
               <span className="bg-theme-primary/20 text-theme-primary px-2 py-0.5 rounded font-mono text-[10px]">
                 {logCount}
               </span>
+            </button>
+
+            <button
+              onClick={onOpenHelp}
+              className="font-label-md text-label-md text-theme-sub hover:text-theme-primary transition-colors uppercase flex items-center gap-1"
+              title="System Help & Documentation"
+            >
+              <span className="material-symbols-outlined text-[18px]">help</span>
+              <span>Help</span>
             </button>
 
             {/* Themes Switcher */}
@@ -89,6 +107,13 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
           {/* Mobile Header Controls */}
           <div className="lg:hidden flex items-center gap-2">
             <ThemeSwitcher compact={true} />
+            <button
+              onClick={onOpenHelp}
+              className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary"
+              title="System Help & Guide"
+            >
+              <span className="material-symbols-outlined text-[20px]">help</span>
+            </button>
             <button
               onClick={toggleLogs}
               className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary"
@@ -158,6 +183,21 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
                 <span className="text-[10px] opacity-75">Live Team Scores & Verification</span>
               </div>
             </button>
+
+            <button
+              onClick={() => handleTabChange('ISSUES')}
+              className={`w-full text-left py-3 px-3.5 rounded-xl flex items-center gap-3 font-semibold transition-all ${
+                activeTab === 'ISSUES'
+                  ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+                  : 'text-on-surface hover:bg-surface-container'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[22px]">bug_report</span>
+              <div className="flex flex-col">
+                <span className="text-sm">Issue & Feature Backlog</span>
+                <span className="text-[10px] opacity-75">Bugs, Upvoting & Enhancements</span>
+              </div>
+            </button>
           </div>
         )}
       </header>
@@ -198,6 +238,18 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
         >
           <span className="material-symbols-outlined text-[24px]">leaderboard</span>
           <span className="text-[10px] tracking-tight mt-0.5">Leaderboard</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('ISSUES')}
+          className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'ISSUES'
+              ? 'text-primary font-bold bg-primary-fixed/50 scale-105'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[24px]">bug_report</span>
+          <span className="text-[10px] tracking-tight mt-0.5">Issues</span>
         </button>
 
         <button
