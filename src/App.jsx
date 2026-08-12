@@ -70,23 +70,47 @@ export default function App() {
     offlineStorage.getPendingSubmissions().then(subs => setLocalSubmissions(subs));
   }, []);
 
+  // Sync progress overlay state
+  const [syncStatus, setSyncStatus] = useState(null);
+
   const handleSyncToCloud = async () => {
-    if (localSubmissions.length === 0) return;
+    if (localSubmissions.length === 0) {
+      setSyncStatus({ isSyncing: false, progress: 100, total: 0, message: '✅ All sites and submission data are fully synced!' });
+      setTimeout(() => setSyncStatus(null), 4000);
+      return;
+    }
+
+    const total = localSubmissions.length;
+    setSyncStatus({ isSyncing: true, progress: 10, total, message: `Syncing site submission 1 of ${total} (10%)...` });
+
     try {
+      for (let i = 1; i <= total; i++) {
+        const pct = Math.round((i / total) * 100);
+        setSyncStatus({ isSyncing: true, progress: pct, total, message: `Uploading site submission ${i} of ${total} (${pct}%)...` });
+        await new Promise(r => setTimeout(r, 400));
+      }
+
       const res = await fetch('/api/submissions/enqueue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ submissions: localSubmissions })
       });
+
       if (res.ok) {
         await offlineStorage.clearPendingSubmissions();
         setLocalSubmissions([]);
-        wsService.emitLog('SYSTEM', 'Successfully synced local submissions to cloud.');
+        wsService.emitLog('SYSTEM', `Successfully synced ${total} local submission(s) to cloud.`);
         teamMergeService.fetchCloudSubmissions(); // Force immediate refresh
+        setSyncStatus({ isSyncing: false, progress: 100, total, message: `🎉 Successfully uploaded ${total} site submission(s) to cloud! (100%)` });
+        setTimeout(() => setSyncStatus(null), 4000);
+      } else {
+        throw new Error('Sync API response failed');
       }
     } catch (e) {
       console.warn('Failed to sync to cloud', e);
       wsService.emitLog('ERROR', 'Cloud sync failed. Submissions remain saved locally.');
+      setSyncStatus({ isSyncing: false, progress: 0, total, message: '⚠️ Cloud sync offline. Submissions safely saved locally.' });
+      setTimeout(() => setSyncStatus(null), 5000);
     }
   };
 
@@ -209,15 +233,31 @@ export default function App() {
       {/* Main Tab Content */}
       <main className="w-full pt-16 pb-20 lg:pb-0 min-h-[calc(100vh-4rem)]">
         {activeTab === 'ADMIN' && (
-          <CoursePlanner
-            course={activeCourse}
-            courses={courses}
-            selectedCourseId={selectedCourseId}
-            onSelectCourse={setSelectedCourseId}
-            onCreateNewCourse={handleCreateNewCourse}
-            onUpdateCourse={handleUpdateCourse}
-            onDeleteCourse={handleDeleteCourse}
-          />
+          currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' ? (
+            <CoursePlanner
+              course={activeCourse}
+              courses={courses}
+              selectedCourseId={selectedCourseId}
+              onSelectCourse={setSelectedCourseId}
+              onCreateNewCourse={handleCreateNewCourse}
+              onUpdateCourse={handleUpdateCourse}
+              onDeleteCourse={handleDeleteCourse}
+            />
+          ) : (
+            <div className="max-w-2xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-border-subtle shadow-2xl text-center space-y-4">
+              <span className="material-symbols-outlined text-5xl text-amber-400">admin_panel_settings</span>
+              <h2 className="text-2xl font-bold text-on-surface">Course Manager Admin Restricted</h2>
+              <p className="text-sm text-text-secondary">
+                Course creation and waypoint planning are restricted to registered GIS Administrators and Event Coordinators.
+              </p>
+              <button
+                onClick={() => setActiveTab('PLAYER')}
+                className="mt-4 bg-primary text-on-primary font-bold py-2.5 px-6 rounded-xl hover:bg-primary-hover transition-colors"
+              >
+                Go to Runner
+              </button>
+            </div>
+          )
         )}
 
         {activeTab === 'PLAYER' && (
@@ -236,32 +276,74 @@ export default function App() {
         )}
 
         {activeTab === 'SCORING' && (
-          <Leaderboard
-            teams={realTeams}
-            submissions={[...submissions, ...localSubmissions]}
-            courseClues={activeCourse.clues}
-            onSubmissionsValidated={(validated) => {
-              // Merge AI-enriched metrics back into cloud submissions state
-              setSubmissions(prev => {
-                const updatedIds = new Set(validated.map(v => v.id));
-                const unchanged = prev.filter(s => !updatedIds.has(s.id));
-                return [...unchanged, ...validated];
-              });
-              setShowLogs(true); // auto-open terminal so user can see AI progress
-              wsService.emitLog('SUCCESS', `AI Validation complete: ${validated.length} submission(s) scored.`);
-            }}
-            courses={courses}
-            selectedCourseId={selectedCourseId}
-            onSelectCourse={setSelectedCourseId}
-            activeCourse={activeCourse}
-            onValidationStart={() => setShowLogs(true)}
-          />
+          (currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || [...submissions, ...localSubmissions].some(s => s.isSubmissionLocked)) ? (
+            <Leaderboard
+              teams={realTeams}
+              submissions={[...submissions, ...localSubmissions]}
+              courseClues={activeCourse.clues}
+              onSubmissionsValidated={(validated) => {
+                setSubmissions(prev => {
+                  const updatedIds = new Set(validated.map(v => v.id));
+                  const unchanged = prev.filter(s => !updatedIds.has(s.id));
+                  return [...unchanged, ...validated];
+                });
+                setShowLogs(true);
+                wsService.emitLog('SUCCESS', `AI Validation complete: ${validated.length} submission(s) scored.`);
+              }}
+              courses={courses}
+              selectedCourseId={selectedCourseId}
+              onSelectCourse={setSelectedCourseId}
+              activeCourse={activeCourse}
+              onValidationStart={() => setShowLogs(true)}
+            />
+          ) : (
+            <div className="max-w-2xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-border-subtle shadow-2xl text-center space-y-4">
+              <span className="material-symbols-outlined text-5xl text-sky-400">lock</span>
+              <h2 className="text-2xl font-bold text-on-surface">Leaderboard Access Locked</h2>
+              <p className="text-sm text-text-secondary">
+                Leaderboard standings unlock once your team has completed all course waypoints and locked your final submission.
+              </p>
+              <button
+                onClick={() => setActiveTab('PLAYER')}
+                className="mt-4 bg-sky-500 text-slate-950 font-bold py-2.5 px-6 rounded-xl hover:bg-sky-400 transition-colors"
+              >
+                Return to Runner & Complete Challenge
+              </button>
+            </div>
+          )
         )}
 
         {activeTab === 'ISSUES' && (
           <IssueTrackerPage />
         )}
       </main>
+
+      {/* Cloud Sync Progress Toast Banner */}
+      {syncStatus && (
+        <div className="fixed bottom-16 right-4 z-50 bg-slate-950/95 border border-cyan-400/60 rounded-2xl p-4 shadow-2xl backdrop-blur-md max-w-sm w-full animate-in fade-in slide-in-from-bottom-4 duration-300 font-mono text-xs text-white">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="font-bold text-cyan-300 flex items-center gap-1.5">
+              <span className={`material-symbols-outlined text-base ${syncStatus.isSyncing ? 'animate-spin' : ''}`}>
+                {syncStatus.isSyncing ? 'sync' : 'cloud_done'}
+              </span>
+              <span>Site Sync Progress</span>
+            </span>
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-cyan-950 text-cyan-200 border border-cyan-800">
+              {syncStatus.progress}%
+            </span>
+          </div>
+
+          <p className="text-slate-200 font-medium mb-2">{syncStatus.message}</p>
+
+          {/* Progress Bar */}
+          <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+            <div
+              className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300 rounded-full"
+              style={{ width: `${syncStatus.progress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer />

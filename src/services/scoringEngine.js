@@ -107,7 +107,22 @@ export function calculateLeaderboard(teams, submissions, courseClues = [], ruleW
       }
     }
 
-    const finalScore = Math.round(rawPointsEarned * (0.4 + overallMultiplier * 0.75) * vibeBonusMultiplier);
+    // Labeling Penalty Check: Teams that turn on A-Z labeling hints lose 50 points
+    const usedLabelingHint = teamSubs.some(s => s.usedLabelingHint) || Boolean(team.usedLabelingHint);
+    const labelingPenalty = usedLabelingHint ? 50 : 0;
+    let labelingRationale = usedLabelingHint ? " [Labeling Penalty: -50 PTS for enabling A-Z hints]" : "";
+
+    // Tech Preparedness & Progress Save Bonus: +25 PTS for failure backup + 10 PTS per progress save as they continue
+    const saveCount = Math.max(
+      teamSubs.filter(s => s.usedTechBackup).length,
+      team.techBackupSaveCount || (team.usedTechBackup ? 1 : 0)
+    );
+    const usedTechBackup = saveCount > 0;
+    const techBackupBonus = usedTechBackup ? 25 + (saveCount - 1) * 10 : 0;
+    let backupRationale = usedTechBackup ? ` [Tech Preparedness Bonus: +${techBackupBonus} PTS for saving progress backup (${saveCount} saves)]` : "";
+
+    const calculatedScore = Math.round(rawPointsEarned * (0.4 + overallMultiplier * 0.75) * vibeBonusMultiplier);
+    const finalScore = Math.max(0, calculatedScore - labelingPenalty + techBackupBonus);
 
     return {
       teamId: team.id,
@@ -120,15 +135,22 @@ export function calculateLeaderboard(teams, submissions, courseClues = [], ruleW
       finalScore,
       ptsPerMin,
       groupPhotoVerifiedCount,
+      usedLabelingHint,
+      labelingPenalty,
+      usedTechBackup,
+      techBackupBonus,
+      saveCount,
       breakdown: {
         spatialAccuracyScore: avgSpatialScore,
         photoVerificationScore: avgPhotoScore,
         groupPhotoComplianceScore,
         captureRateScore,
         timePenaltyScore,
+        labelingPenalty,
+        techBackupBonus,
         overallMultiplierPct: Math.round(overallMultiplier * 100)
       },
-      aiRationale: `Fail-safe base: ${rawPointsEarned} pts. Metrics: GPS Precision (${avgSpatialScore}%), Photo AI (${avgPhotoScore}%), Group Photos (${groupPhotoComplianceScore}%), Speed (${ptsPerMin} pts/min).${vibeRationale}`
+      aiRationale: `Fail-safe base: ${rawPointsEarned} pts. Metrics: GPS Precision (${avgSpatialScore}%), Photo AI (${avgPhotoScore}%), Group Photos (${groupPhotoComplianceScore}%), Speed (${ptsPerMin} pts/min).${vibeRationale}${labelingRationale}${backupRationale}`
     };
   });
 

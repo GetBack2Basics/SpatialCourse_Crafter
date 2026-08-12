@@ -96,6 +96,7 @@ function ensureArrowIcons(map) {
 export default function MapLibreView({
   center = [145.7781, -16.9186], // [lng, lat] for MapLibre
   zoom = 15,
+  isPlanning = false,
   startLocation = null,
   finishLocation = null,
   clues = [],
@@ -103,6 +104,7 @@ export default function MapLibreView({
   userLocation = null,
   submissions = [],
   showRouteLine = true,
+  showWaypointLabels = true,
   onSelectClue = () => {},
   onUpdateStartLocation = () => {},
   onUpdateFinishLocation = () => {},
@@ -221,7 +223,6 @@ export default function MapLibreView({
       if (activeClue && activeClue.targetLocation) {
         map.flyTo({
           center: [activeClue.targetLocation.lng, activeClue.targetLocation.lat],
-          zoom: 17,
           duration: 1000
         });
       }
@@ -528,17 +529,27 @@ export default function MapLibreView({
           }
 
           const el = document.createElement('div');
-          el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 font-mono ${
-            isCompleted
-              ? 'bg-emerald-500 text-white border-2 border-emerald-300'
-              : isActive
-              ? 'bg-sky-500 text-white border-2 border-white ring-4 ring-sky-400/40 animate-bounce'
-              : isMasked
-              ? 'bg-purple-900 text-purple-200 border-2 border-purple-400'
-              : 'bg-slate-800 text-slate-200 border-2 border-slate-600'
-          }`;
-          el.innerText = label;
-          el.title = isMasked ? `Waypoint Zone ${label} (Exact Coordinates Masked)` : `Waypoint ${label} (Drag on map to reposition)`;
+          if (showWaypointLabels) {
+            el.className = `w-10 h-10 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center font-bold text-sm shadow-xl transition-transform hover:scale-110 font-mono ${
+              isCompleted
+                ? 'bg-emerald-500 text-white border-2 border-emerald-300'
+                : isActive
+                ? 'bg-sky-500 text-white border-2 border-white ring-4 ring-sky-400/40 animate-bounce'
+                : isMasked
+                ? 'bg-purple-900 text-purple-200 border-2 border-purple-400'
+                : 'bg-slate-800 text-slate-200 border-2 border-slate-600'
+            }`;
+            el.innerText = label;
+          } else {
+            el.className = `w-5 h-5 rounded-full cursor-grab active:cursor-grabbing shadow-lg transition-transform hover:scale-125 border-2 border-white ${
+              isCompleted
+                ? 'bg-emerald-500'
+                : isActive
+                ? 'bg-sky-400 ring-4 ring-sky-400/40'
+                : 'bg-indigo-500'
+            }`;
+          }
+          el.title = isMasked ? `Waypoint Zone (Exact Coordinates Masked)` : `Waypoint: ${clue.title} (Drag to reposition)`;
           el.onclick = () => {
             onSelectClue(clue.id);
             if (onInspectPoint) onInspectPoint(pt);
@@ -703,19 +714,21 @@ export default function MapLibreView({
               'line-opacity': 0.7
             }
           });
-          map.addLayer({
-            id: 'route-arrows',
-            type: 'symbol',
-            source: 'route-source',
-            layout: {
-              'symbol-placement': 'line',
-              'symbol-spacing': 45,
-              'icon-image': 'route-arrow-icon',
-              'icon-size': 0.65,
-              'icon-allow-overlap': true,
-              'icon-ignore-placement': true
-            }
-          });
+          if (isPlanning) {
+            map.addLayer({
+              id: 'route-arrows',
+              type: 'symbol',
+              source: 'route-source',
+              layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': 45,
+                'icon-image': 'route-arrow-icon',
+                'icon-size': 0.65,
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true
+              }
+            });
+          }
         }
       } else if (!showRouteLine && map.getSource('route-source')) {
         map.getSource('route-source').setData({

@@ -50,6 +50,8 @@ export default function CoursePlanner({
 
   // Movable & Collapsible Spatial Analysis Overlay Card State
   const [isAnalysisCollapsed, setIsAnalysisCollapsed] = useState(false);
+  const [showPlannerRoute, setShowPlannerRoute] = useState(false);
+  const [showPlannerLabels, setShowPlannerLabels] = useState(false);
   const [cardPos, setCardPos] = useState({ x: 24, y: 24 });
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -807,653 +809,694 @@ export default function CoursePlanner({
 
       </div>
 
-      {/* Main Content Area: Split Layout from Stitch code.html */}
-      <div className="flex-1 flex flex-col lg:flex-row w-full overflow-hidden">
+      {/* Main Content Area: Vertical flow with Map as bottom element before footer */}
+      <div className="flex-1 flex flex-col w-full overflow-y-auto bg-surface relative z-10 custom-scrollbar p-margin-mobile lg:p-margin-desktop space-y-12 pb-24">
         
-        {/* LEFT COLUMN: Course Parameters & Clues */}
-        <div className="w-full lg:w-[45%] flex flex-col overflow-y-auto bg-surface relative z-10 custom-scrollbar pb-24 lg:pb-0">
-          <div className="p-margin-mobile lg:p-margin-desktop space-y-12">
-            
-            {/* Section: Course Parameters */}
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">01</div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">Course Parameters</h2>
+        {/* TOP SECTION: Course Parameters, Themes & Clues */}
+        <div className="w-full space-y-12">
+          
+          {/* Section: Course Parameters */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">01</div>
+              <h2 className="font-headline-md text-headline-md text-on-surface">Course Parameters</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div className="relative group">
+                <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Course Title</label>
+                <input
+                  className="w-full bg-surface-container-lowest rounded-lg py-3 px-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="relative group">
+                  <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Duration (mins)</label>
+                  <div className="relative">
+                    <input
+                      className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
+                      type="number"
+                      value={duration}
+                      onChange={e => setDuration(e.target.value)}
+                    />
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">timer</span>
+                  </div>
+                </div>
+
+                <div className="relative group">
+                  <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Target Waypoints</label>
+                  <div className="relative">
+                    <input
+                      className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={customWaypointCount}
+                      onChange={e => setCustomWaypointCount(e.target.value)}
+                      placeholder="Auto (e.g. 10)"
+                    />
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400">pin_drop</span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary mt-1 font-mono">Specify exact count (e.g. 10)</p>
+                </div>
+
+                <div className="relative group">
+                  <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Activation Radius (m)</label>
+                  <div className="relative">
+                    <input
+                      className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
+                      type="number"
+                      value={activationRadius}
+                      onChange={e => setActivationRadius(e.target.value)}
+                      placeholder="100"
+                    />
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">radar</span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary mt-1 font-mono">Trigger radius (Default: 100m)</p>
+                </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="relative group">
-                  <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Course Title</label>
+              {/* Start Location Name with 3+ Character Autofill / Autocomplete */}
+              <div className="relative group">
+                <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase flex justify-between items-center">
+                  <span>Start Location Name (Draggable)</span>
+                  <span className="text-[11px] text-amber-500 font-normal">Drag flag on map to update</span>
+                </label>
+                <div className="relative">
                   <input
-                    className="w-full bg-surface-container-lowest rounded-lg py-3 px-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
+                    className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
                     type="text"
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
+                    placeholder="e.g. Rathmines Jetty, Cairns Lagoon..."
+                    value={startName}
+                    onChange={e => {
+                      setStartName(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
                   />
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="relative group">
-                    <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Duration (mins)</label>
-                    <div className="relative">
-                      <input
-                        className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
-                        type="number"
-                        value={duration}
-                        onChange={e => setDuration(e.target.value)}
-                      />
-                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">timer</span>
-                    </div>
-                  </div>
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-amber-500">flag</span>
 
-                  <div className="relative group">
-                    <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Target Waypoints</label>
-                    <div className="relative">
-                      <input
-                        className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
-                        type="number"
-                        min="1"
-                        max="30"
-                        value={customWaypointCount}
-                        onChange={e => setCustomWaypointCount(e.target.value)}
-                        placeholder="Auto (e.g. 10)"
-                      />
-                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400">pin_drop</span>
-                    </div>
-                    <p className="text-[11px] text-text-secondary mt-1 font-mono">Specify exact count (e.g. 10)</p>
-                  </div>
-
-                  <div className="relative group">
-                    <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Activation Radius (m)</label>
-                    <div className="relative">
-                      <input
-                        className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm font-mono"
-                        type="number"
-                        value={activationRadius}
-                        onChange={e => setActivationRadius(e.target.value)}
-                        placeholder="100"
-                      />
-                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">radar</span>
-                    </div>
-                    <p className="text-[11px] text-text-secondary mt-1 font-mono">Trigger radius (Default: 100m)</p>
-                  </div>
-                </div>
-
-                {/* Start Location Name with 3+ Character Autofill / Autocomplete */}
-                <div className="relative group">
-                  <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase flex justify-between items-center">
-                    <span>Start Location Name (Draggable)</span>
-                    <span className="text-[11px] text-amber-500 font-normal">Drag flag on map to update</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
-                      type="text"
-                      placeholder="e.g. Rathmines Jetty, Cairns Lagoon..."
-                      value={startName}
-                      onChange={e => {
-                        setStartName(e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                    />
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-amber-500">flag</span>
-
-                    {/* Autocomplete Dropdown when 3+ characters typed */}
-                    {showSuggestions && locationSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-surface-container-lowest border border-primary/40 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border-subtle">
-                        {locationSuggestions.map((item, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => {
-                              setStartName(item.display_name);
-                              setStartLat(item.lat);
-                              setStartLng(item.lng);
-                              setShowSuggestions(false);
-                              wsService.emitLog('SPATIAL', `Selected location from autofill: ${item.display_name} (${item.lat}, ${item.lng})`);
-                              showToast(`📍 Start Location set to: ${item.display_name.split(',')[0]}`);
-                            }}
-                            className="w-full text-left p-3 hover:bg-primary-container/20 transition-colors flex items-start gap-2.5 cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-primary text-sm mt-0.5">place</span>
-                            <div>
-                              <div className="font-bold text-xs text-on-surface">{item.display_name}</div>
-                              <div className="text-[10px] font-mono text-text-secondary">{item.lat.toFixed(5)}°, {item.lng.toFixed(5)}°</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Finish Location Name & Drag Indicator with Autocomplete */}
-                <div className="relative group">
-                  <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase flex justify-between items-center">
-                    <span>Finish Location Name (Draggable)</span>
-                    <span className="text-[11px] text-rose-500 font-normal">Type 3+ chars for search & autofill</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all shadow-sm"
-                      type="text"
-                      placeholder="e.g. Style Point Moorings, Marlin Marina..."
-                      value={finishName}
-                      onChange={e => {
-                        setFinishName(e.target.value);
-                        setShowFinishSuggestions(true);
-                      }}
-                      onFocus={() => setShowFinishSuggestions(true)}
-                    />
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-rose-500">sports_score</span>
-
-                    {/* Autocomplete Dropdown for Finish Location */}
-                    {showFinishSuggestions && finishLocationSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-surface-container-lowest border border-rose-500/40 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border-subtle">
-                        {finishLocationSuggestions.map((item, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => {
-                              setFinishName(item.display_name);
-                              setFinishLat(item.lat);
-                              setFinishLng(item.lng);
-                              setShowFinishSuggestions(false);
-                              onUpdateCourse({
-                                ...course,
-                                finishLocation: {
-                                  ...course.finishLocation,
-                                  name: item.display_name,
-                                  lat: item.lat,
-                                  lng: item.lng
-                                }
-                              });
-                              wsService.emitLog('SPATIAL', `Selected finish location from autofill: ${item.display_name} (${item.lat}, ${item.lng})`);
-                              showToast(`🏁 Finish Location set to: ${item.display_name.split(',')[0]}`);
-                            }}
-                            className="w-full text-left p-3 hover:bg-rose-500/10 transition-colors flex items-start gap-2.5 cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-rose-500 text-sm mt-0.5">place</span>
-                            <div>
-                              <div className="font-bold text-xs text-on-surface">{item.display_name}</div>
-                              <div className="text-[10px] font-mono text-text-secondary">{item.lat.toFixed(5)}°, {item.lng.toFixed(5)}°</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Course Assigned Teams Selector */}
-                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-theme-container-high space-y-2 font-mono text-xs">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-emerald-400 uppercase flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-base">groups</span>
-                      <span>Assigned Competition Teams for Course</span>
-                    </label>
-                    <span className="text-[10px] text-theme-sub font-normal">Check teams allowed to compete</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
-                    {authService.teams.map(team => {
-                      const isAssigned = (team.assignedCourseIds || []).includes(course.id);
-                      return (
-                        <label key={team.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
-                          isAssigned ? 'bg-emerald-950/80 border-emerald-500 text-emerald-200' : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
-                        }`}>
-                          <input
-                            type="checkbox"
-                            checked={isAssigned}
-                            onChange={() => {
-                              const currentTeams = authService.teams.filter(t => (t.assignedCourseIds || []).includes(course.id)).map(t => t.id);
-                              const updatedTeamIds = isAssigned 
-                                ? currentTeams.filter(id => id !== team.id)
-                                : [...currentTeams, team.id];
-                              authService.assignCourseToTeams(course.id, updatedTeamIds);
-                              showToast(`Updated assigned teams for course "${course.title}"!`);
-                            }}
-                            className="rounded border-theme bg-theme-surface text-emerald-500 focus:ring-emerald-400"
-                          />
-                          <span className="font-bold text-[11px] truncate">{team.name} ({team.members?.length || 0} members)</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Dynamic Waypoint Calculation & Spatial Pace Card */}
-                <div className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 space-y-3 font-mono text-xs shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-cyan-400 uppercase flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-base">route</span>
-                      <span>Spatial Pace & Waypoint Estimator</span>
-                    </label>
-                    <span className="text-[10px] bg-cyan-900/60 text-cyan-300 border border-cyan-700/50 px-2 py-0.5 rounded-full font-bold">
-                      {optimalWaypointMetrics.count} Waypoints Target
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
-                      <div className="text-[10px] text-text-secondary uppercase">Route Distance</div>
-                      <div className="font-bold text-on-surface text-sm">{(optimalWaypointMetrics.estimatedRouteMeters / 1000).toFixed(2)} km</div>
-                      <div className="text-[9px] text-text-secondary">({optimalWaypointMetrics.directDistanceMeters}m straight)</div>
-                    </div>
-                    
-                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
-                      <div className="text-[10px] text-text-secondary uppercase">Elevation Gain</div>
-                      <div className="font-bold text-amber-400 text-sm">+{optimalWaypointMetrics.elevationGainMeters}m</div>
-                      <div className="text-[9px] text-amber-500/80">+{optimalWaypointMetrics.inclinePenaltyMinutes}m incline penalty</div>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
-                      <div className="text-[10px] text-text-secondary uppercase">Walking Time</div>
-                      <div className="font-bold text-emerald-400 text-sm">{optimalWaypointMetrics.totalWalkMinutes} mins</div>
-                      <div className="text-[9px] text-emerald-500/80">@ 4.8 km/h pace</div>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
-                      <div className="text-[10px] text-text-secondary uppercase">Location Stay</div>
-                      <div className="font-bold text-cyan-300 text-sm">{optimalWaypointMetrics.count * 5} mins</div>
-                      <div className="text-[9px] text-cyan-400/80">5 mins / location</div>
-                    </div>
-                  </div>
-
-                  <div className="text-[11px] text-cyan-200/90 leading-tight pt-1 border-t border-cyan-800/40 flex items-center justify-between flex-wrap gap-1">
-                    <span>Target Duration: <strong>{duration} mins</strong></span>
-                    <span className="text-[10px] text-cyan-400 font-semibold">{optimalWaypointMetrics.summary}</span>
-                  </div>
-                </div>
-
-                {/* Collapsible Coordinate Parser & Location Selector Drawer */}
-                <div className="rounded-xl border border-primary/20 bg-primary-container/5 overflow-hidden transition-all">
-                  <button
-                    type="button"
-                    onClick={() => setIsParserOpen(!isParserOpen)}
-                    className="w-full p-3.5 flex items-center justify-between font-label-md text-xs text-primary font-bold uppercase hover:bg-primary-container/10 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-base">tune</span>
-                      <span>Coordinate Parser & Current Location</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono font-semibold text-on-surface-variant">
-                        {startLat && startLng ? `${parseFloat(startLat).toFixed(4)}°, ${parseFloat(startLng).toFixed(4)}°` : 'Collapsed'}
-                      </span>
-                      <span className="material-symbols-outlined text-base">{isParserOpen ? 'expand_less' : 'expand_more'}</span>
-                    </div>
-                  </button>
-
-                  {isParserOpen && (
-                    <div className="p-4 pt-1 border-t border-primary/15 space-y-3">
-                      
-                      {/* "Use current location" Button inside Collapsed Parser */}
-                      <div className="flex items-center justify-between gap-3 pt-1">
-                        <span className="text-xs text-on-surface-variant font-medium">Set start using device GPS:</span>
+                  {/* Autocomplete Dropdown when 3+ characters typed */}
+                  {showSuggestions && locationSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-surface-container-lowest border border-primary/40 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border-subtle">
+                      {locationSuggestions.map((item, idx) => (
                         <button
+                          key={idx}
                           type="button"
-                          onClick={handleUsePhoneGPS}
-                          disabled={isLocating}
-                          className="px-3.5 py-2 rounded-full bg-primary text-on-primary hover:bg-surface-tint font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                          onClick={() => {
+                            setStartName(item.display_name);
+                            setStartLat(item.lat);
+                            setStartLng(item.lng);
+                            setShowSuggestions(false);
+                            wsService.emitLog('SPATIAL', `Selected location from autofill: ${item.display_name} (${item.lat}, ${item.lng})`);
+                            showToast(`📍 Start Location set to: ${item.display_name.split(',')[0]}`);
+                          }}
+                          className="w-full text-left p-3 hover:bg-primary-container/20 transition-colors flex items-start gap-2.5 cursor-pointer"
                         >
-                          <span className={`material-symbols-outlined text-sm ${isLocating ? 'animate-spin' : ''}`}>my_location</span>
-                          <span>{isLocating ? 'Acquiring GPS...' : 'Use Current Location'}</span>
-                        </button>
-                      </div>
-
-                      {/* Quick Paste Box */}
-                      <div>
-                        <label className="block font-label-md text-[11px] text-text-secondary uppercase mb-1 font-mono">
-                          Paste Coordinates, Maps URL, or GPS Text
-                        </label>
-                        <input
-                          type="text"
-                          value={rawCoordText}
-                          onChange={e => handleRawCoordChange(e.target.value)}
-                          placeholder="Paste Google Maps link, '-33.0372, 151.5945', or app GPS text..."
-                          className="w-full bg-surface-container-lowest rounded-lg py-2.5 px-3.5 text-xs font-mono text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
-                        />
-                        {parsedNotice && (
-                          <div className={`mt-2 text-[11px] font-mono px-2.5 py-1 rounded font-semibold ${
-                            parsedNotice.startsWith('✅')
-                              ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800'
-                              : 'bg-amber-950/60 text-amber-300 border border-amber-800'
-                          }`}>
-                            {parsedNotice}
+                          <span className="material-symbols-outlined text-primary text-sm mt-0.5">place</span>
+                          <div>
+                            <div className="font-bold text-xs text-on-surface">{item.display_name}</div>
+                            <div className="text-[10px] font-mono text-text-secondary">{item.lat.toFixed(5)}°, {item.lng.toFixed(5)}°</div>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="text-[11px] font-mono text-text-secondary flex justify-between items-center pt-1 border-t border-border-subtle/50">
-                        <span>Active Coordinates:</span>
-                        <span className="font-bold text-primary">{parseFloat(startLat).toFixed(5)}°, {parseFloat(startLng).toFixed(5)}°</span>
-                      </div>
-
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-
               </div>
-            </section>
 
-            {/* Section: Theme Selection & AI Web Research Course Generation */}
-            <section className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">02</div>
-                  <div>
-                    <h2 className="font-headline-md text-headline-md text-on-surface">Location Theme</h2>
-                    <p className="text-xs text-text-secondary">Choose or add a theme to generate custom route waypoints via local AI web research.</p>
-                  </div>
+              {/* Finish Location Name & Drag Indicator with Autocomplete */}
+              <div className="relative group">
+                <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase flex justify-between items-center">
+                  <span>Finish Location Name (Draggable)</span>
+                  <span className="text-[11px] text-rose-500 font-normal">Type 3+ chars for search & autofill</span>
+                </label>
+                <div className="relative">
+                  <input
+                    className="w-full bg-surface-container-lowest rounded-lg py-3 pl-12 pr-4 font-body-lg text-body-lg text-on-surface border border-border-subtle focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all shadow-sm"
+                    type="text"
+                    placeholder="e.g. Style Point Moorings, Marlin Marina..."
+                    value={finishName}
+                    onChange={e => {
+                      setFinishName(e.target.value);
+                      setShowFinishSuggestions(true);
+                    }}
+                    onFocus={() => setShowFinishSuggestions(true)}
+                  />
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-rose-500">sports_score</span>
+
+                  {/* Autocomplete Dropdown for Finish Location */}
+                  {showFinishSuggestions && finishLocationSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-surface-container-lowest border border-rose-500/40 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border-subtle">
+                      {finishLocationSuggestions.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setFinishName(item.display_name);
+                            setFinishLat(item.lat);
+                            setFinishLng(item.lng);
+                            setShowFinishSuggestions(false);
+                            onUpdateCourse({
+                              ...course,
+                              finishLocation: {
+                                ...course.finishLocation,
+                                name: item.display_name,
+                                lat: item.lat,
+                                lng: item.lng
+                              }
+                            });
+                            wsService.emitLog('SPATIAL', `Selected finish location from autofill: ${item.display_name} (${item.lat}, ${item.lng})`);
+                            showToast(`🏁 Finish Location set to: ${item.display_name.split(',')[0]}`);
+                          }}
+                          className="w-full text-left p-3 hover:bg-rose-500/10 transition-colors flex items-start gap-2.5 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-rose-500 text-sm mt-0.5">place</span>
+                          <div>
+                            <div className="font-bold text-xs text-on-surface">{item.display_name}</div>
+                            <div className="text-[10px] font-mono text-text-secondary">{item.lat.toFixed(5)}°, {item.lng.toFixed(5)}°</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Add Custom Theme Form */}
-              <form onSubmit={handleAddCustomTheme} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Type a new custom theme (e.g. Indigenous Lagoon Ecology, Sculpture Walk)..."
-                  value={customThemeInput}
-                  onChange={e => setCustomThemeInput(e.target.value)}
-                  className="flex-1 bg-surface-container-lowest rounded-xl px-4 py-2.5 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono shadow-sm"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary/20 text-xs font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer shrink-0"
-                >
-                  <span className="material-symbols-outlined text-sm">add</span>
-                  <span>Add Theme</span>
-                </button>
-              </form>
-
-              {/* Theme Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {availableThemes.map(item => {
-                  const isActive = theme === item.name;
-                  return (
-                    <div
-                      key={item.name}
-                      onClick={() => setTheme(item.name)}
-                      className={`text-left p-4 rounded-xl border transition-colors shadow-sm group relative overflow-hidden cursor-pointer flex flex-col justify-between ${
-                        isActive
-                          ? 'border-2 border-primary bg-primary/5'
-                          : 'border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low'
-                      }`}
-                    >
-                      {isActive && (
-                        <div className="absolute top-0 right-0 bg-primary text-on-primary text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg">Active</div>
-                      )}
-
-                      <div className="flex justify-between items-start mb-2">
-                        <span className={`material-symbols-outlined text-[28px] group-hover:scale-110 transition-transform ${isActive ? 'text-primary' : 'text-tertiary'}`} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
-                          {item.icon}
-                        </span>
-                        
-                        {/* Edit Theme Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingThemeItem({ originalName: item.name, name: item.name, icon: item.icon, desc: item.desc });
+              {/* Course Assigned Teams Selector */}
+              <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-theme-container-high space-y-2 font-mono text-xs">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">groups</span>
+                    <span>Assigned Competition Teams for Course</span>
+                  </label>
+                  <span className="text-[10px] text-theme-sub font-normal">Check teams allowed to compete</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                  {authService.teams.map(team => {
+                    const isAssigned = (team.assignedCourseIds || []).includes(course.id);
+                    return (
+                      <label key={team.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
+                        isAssigned ? 'bg-emerald-950/80 border-emerald-500 text-emerald-200' : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={isAssigned}
+                          onChange={() => {
+                            const currentTeams = authService.teams.filter(t => (t.assignedCourseIds || []).includes(course.id)).map(t => t.id);
+                            const updatedTeamIds = isAssigned 
+                              ? currentTeams.filter(id => id !== team.id)
+                              : [...currentTeams, team.id];
+                            authService.assignCourseToTeams(course.id, updatedTeamIds);
+                            showToast(`Updated assigned teams for course "${course.title}"!`);
                           }}
-                          title="Edit Theme"
-                          className="p-1 rounded-lg bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">edit</span>
-                        </button>
-                      </div>
+                          className="rounded border-theme bg-theme-surface text-emerald-500 focus:ring-emerald-400"
+                        />
+                        <span className="font-bold text-[11px] truncate">{team.name} ({team.members?.length || 0} members)</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
 
-                      <div>
-                        <h3 className={`font-label-md text-label-md mb-1 ${isActive ? 'text-primary' : 'text-on-surface'}`}>{item.name}</h3>
-                        <p className="font-body-sm text-body-sm text-text-secondary line-clamp-2 mb-3">{item.desc}</p>
-                      </div>
+              {/* Dynamic Waypoint Calculation & Spatial Pace Card */}
+              <div className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 space-y-3 font-mono text-xs shadow-sm">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-cyan-400 uppercase flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">route</span>
+                    <span>Spatial Pace & Waypoint Estimator</span>
+                  </label>
+                  <span className="text-[10px] bg-cyan-900/60 text-cyan-300 border border-cyan-700/50 px-2 py-0.5 rounded-full font-bold">
+                    {optimalWaypointMetrics.count} Waypoints Target
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                    <div className="text-[10px] text-text-secondary uppercase">Route Distance</div>
+                    <div className="font-bold text-on-surface text-sm">{(optimalWaypointMetrics.estimatedRouteMeters / 1000).toFixed(2)} km</div>
+                    <div className="text-[9px] text-text-secondary">({optimalWaypointMetrics.directDistanceMeters}m straight)</div>
+                  </div>
+                  
+                  <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                    <div className="text-[10px] text-text-secondary uppercase">Elevation Gain</div>
+                    <div className="font-bold text-amber-400 text-sm">+{optimalWaypointMetrics.elevationGainMeters}m</div>
+                    <div className="text-[9px] text-amber-500/80">+{optimalWaypointMetrics.inclinePenaltyMinutes}m incline penalty</div>
+                  </div>
 
+                  <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                    <div className="text-[10px] text-text-secondary uppercase">Walking Time</div>
+                    <div className="font-bold text-emerald-400 text-sm">{optimalWaypointMetrics.totalWalkMinutes} mins</div>
+                    <div className="text-[9px] text-emerald-500/80">@ 4.8 km/h pace</div>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+                    <div className="text-[10px] text-text-secondary uppercase">Location Stay</div>
+                    <div className="font-bold text-cyan-300 text-sm">{optimalWaypointMetrics.count * 5} mins</div>
+                    <div className="text-[9px] text-cyan-400/80">5 mins / location</div>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-cyan-200/90 leading-tight pt-1 border-t border-cyan-800/40 flex items-center justify-between flex-wrap gap-1">
+                  <span>Target Duration: <strong>{duration} mins</strong></span>
+                  <span className="text-[10px] text-cyan-400 font-semibold">{optimalWaypointMetrics.summary}</span>
+                </div>
+              </div>
+
+              {/* Collapsible Coordinate Parser & Location Selector Drawer */}
+              <div className="rounded-xl border border-primary/20 bg-primary-container/5 overflow-hidden transition-all">
+                <button
+                  type="button"
+                  onClick={() => setIsParserOpen(!isParserOpen)}
+                  className="w-full p-3.5 flex items-center justify-between font-label-md text-xs text-primary font-bold uppercase hover:bg-primary-container/10 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">tune</span>
+                    <span>Coordinate Parser & Current Location</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono font-semibold text-on-surface-variant">
+                      {startLat && startLng ? `${parseFloat(startLat).toFixed(4)}°, ${parseFloat(startLng).toFixed(4)}°` : 'Collapsed'}
+                    </span>
+                    <span className="material-symbols-outlined text-base">{isParserOpen ? 'expand_less' : 'expand_more'}</span>
+                  </div>
+                </button>
+
+                {isParserOpen && (
+                  <div className="p-4 pt-1 border-t border-primary/15 space-y-3">
+                    
+                    {/* "Use current location" Button inside Collapsed Parser */}
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <span className="text-xs text-on-surface-variant font-medium">Set start using device GPS:</span>
+                      <button
+                        type="button"
+                        onClick={handleUsePhoneGPS}
+                        disabled={isLocating}
+                        className="px-3.5 py-2 rounded-full bg-primary text-on-primary hover:bg-surface-tint font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                      >
+                        <span className={`material-symbols-outlined text-sm ${isLocating ? 'animate-spin' : ''}`}>my_location</span>
+                        <span>{isLocating ? 'Acquiring GPS...' : 'Use Current Location'}</span>
+                      </button>
+                    </div>
+
+                    {/* Quick Paste Box */}
+                    <div>
+                      <label className="block font-label-md text-[11px] text-text-secondary uppercase mb-1 font-mono">
+                        Paste Coordinates, Maps URL, or GPS Text
+                      </label>
+                      <input
+                        type="text"
+                        value={rawCoordText}
+                        onChange={e => handleRawCoordChange(e.target.value)}
+                        placeholder="Paste Google Maps link, '-33.0372, 151.5945', or app GPS text..."
+                        className="w-full bg-surface-container-lowest rounded-lg py-2.5 px-3.5 text-xs font-mono text-on-surface border border-border-subtle focus:outline-none focus:border-primary"
+                      />
+                      {parsedNotice && (
+                        <div className={`mt-2 text-[11px] font-mono px-2.5 py-1 rounded font-semibold ${
+                          parsedNotice.startsWith('✅')
+                            ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800'
+                            : 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                        }`}>
+                          {parsedNotice}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-[11px] font-mono text-text-secondary flex justify-between items-center pt-1 border-t border-border-subtle/50">
+                      <span>Active Coordinates:</span>
+                      <span className="font-bold text-primary">{parseFloat(startLat).toFixed(5)}°, {parseFloat(startLng).toFixed(5)}°</span>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </section>
+
+          {/* Section: Theme Selection & AI Web Research Course Generation */}
+          <section className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">02</div>
+                <div>
+                  <h2 className="font-headline-md text-headline-md text-on-surface">Location Theme</h2>
+                  <p className="text-xs text-text-secondary">Choose or add a theme to generate custom route waypoints via local AI web research.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Add Custom Theme Form */}
+            <form onSubmit={handleAddCustomTheme} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Type a new custom theme (e.g. Indigenous Lagoon Ecology, Sculpture Walk)..."
+                value={customThemeInput}
+                onChange={e => setCustomThemeInput(e.target.value)}
+                className="flex-1 bg-surface-container-lowest rounded-xl px-4 py-2.5 text-xs text-on-surface border border-border-subtle focus:outline-none focus:border-primary font-mono shadow-sm"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-xl bg-secondary-container text-on-secondary-container hover:bg-secondary/20 text-xs font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                <span>Add Theme</span>
+              </button>
+            </form>
+
+            {/* Theme Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {availableThemes.map(item => {
+                const isActive = theme === item.name;
+                return (
+                  <div
+                    key={item.name}
+                    onClick={() => setTheme(item.name)}
+                    className={`text-left p-4 rounded-xl border transition-colors shadow-sm group relative overflow-hidden cursor-pointer flex flex-col justify-between ${
+                      isActive
+                        ? 'border-2 border-primary bg-primary/5'
+                        : 'border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute top-0 right-0 bg-primary text-on-primary text-[10px] uppercase font-bold px-2 py-1 rounded-bl-lg">Active</div>
+                    )}
+
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`material-symbols-outlined text-[28px] group-hover:scale-110 transition-transform ${isActive ? 'text-primary' : 'text-tertiary'}`} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                        {item.icon}
+                      </span>
+                      
+                      {/* Edit Theme Button */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setTheme(item.name);
-                          handleGenerateCourseWithAI(item.name);
+                          setEditingThemeItem({ originalName: item.name, name: item.name, icon: item.icon, desc: item.desc });
                         }}
-                        disabled={isGeneratingCourse}
-                        className="mt-2 w-full py-1.5 px-3 rounded-lg bg-surface-container-high hover:bg-primary/10 text-primary border border-primary/30 text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        title="Edit Theme"
+                        className="p-1 rounded-lg bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-xs">travel_explore</span>
-                        <span>Generate "{item.name}" Course</span>
+                        <span className="material-symbols-outlined text-sm">edit</span>
                       </button>
                     </div>
-                  );
-                })}
-              </div>
-            </section>
 
-            {/* Section: Course Clues */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">03</div>
-                  <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues ({course.clues.length})</h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleOptimizeRouteOrder}
-                    className="h-9 px-3 rounded-full font-label-md text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all font-bold flex items-center gap-1.5 cursor-pointer shadow-sm font-mono"
-                    title="Auto-Sort Waypoints into Optimal Start-to-Finish Physical Walking Order"
-                  >
-                    <span className="material-symbols-outlined text-sm">alt_route</span>
-                    <span>Auto-Sort Route</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingClue(true)}
-                    className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors shadow-sm cursor-pointer"
-                    title="Add New Spatial Waypoint"
-                  >
-                    <span className="material-symbols-outlined text-base">add</span>
-                  </button>
-                </div>
-              </div>
+                    <div>
+                      <h3 className={`font-label-md text-label-md mb-1 ${isActive ? 'text-primary' : 'text-on-surface'}`}>{item.name}</h3>
+                      <p className="font-body-sm text-body-sm text-text-secondary line-clamp-2 mb-3">{item.desc}</p>
+                    </div>
 
-              {/* Waypoint Cards List with Move Up, Move Down, Edit & Delete */}
-              <div className="space-y-4">
-                {course.clues.map((clue, idx) => {
-                  const label = getWaypointLabel(idx);
-                  const isActive = clue.id === activeClueId;
-
-                  return (
-                    <div
-                      key={clue.id}
-                      onClick={() => setActiveClueId(clue.id)}
-                      className={`p-5 rounded-xl border-l-4 shadow-sm group hover:shadow-md transition-all relative cursor-pointer ${
-                        isActive
-                          ? 'bg-primary/10 border-l-primary border border-primary/30 ring-2 ring-primary/20'
-                          : 'bg-surface-container-lowest border-l-primary border border-border-subtle'
-                      }`}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTheme(item.name);
+                        handleGenerateCourseWithAI(item.name);
+                      }}
+                      disabled={isGeneratingCourse}
+                      className="mt-2 w-full py-1.5 px-3 rounded-lg bg-surface-container-high hover:bg-primary/10 text-primary border border-primary/30 text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <div className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-mono font-bold text-xs shadow-sm uppercase">
-                        {label}
-                      </div>
-
-                      <div className="flex justify-between items-start mb-2 pl-2">
-                        <div>
-                          <h4 className="font-label-md text-label-md text-on-surface flex items-center gap-2">
-                            <span>Waypoint {label}: {clue.title}</span>
-                            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{clue.category}</span>
-                          </h4>
-                        </div>
-
-                      {/* Waypoint Action Controls: Move Up, Move Down, Edit, Delete */}
-                      <div className="flex items-center gap-1">
-                        <span className="bg-secondary-container text-on-secondary-container px-2 py-1 rounded font-label-sm font-bold text-xs mr-2">
-                          {clue.points} PTS
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => handleMoveClue(clue.id, 'UP')}
-                          disabled={idx === 0}
-                          title="Move Waypoint Up"
-                          className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-base">arrow_upward</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleMoveClue(clue.id, 'DOWN')}
-                          disabled={idx === course.clues.length - 1}
-                          title="Move Waypoint Down"
-                          className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-base">arrow_downward</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setEditingClue({ ...clue })}
-                          title="Edit Waypoint & Verification Criteria"
-                          className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-base">edit</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteClue(clue.id)}
-                          title="Delete Waypoint"
-                          className="p-1 rounded bg-surface-container hover:bg-error-container text-on-surface-variant hover:text-error cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-base">delete</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">{clue.description}</p>
-
-                    {/* Location Reference Photo Preview in Admin Sidebar */}
-                    {clue.referencePhotoUrl && (
-                      <div className="pl-2 mb-3">
-                        <div className="relative rounded-lg overflow-hidden border border-border-subtle max-h-28 group">
-                          <img src={clue.referencePhotoUrl} alt={clue.title} className="w-full h-28 object-cover group-hover:scale-105 transition-transform" />
-                          <div className="absolute bottom-1 left-1 bg-surface/85 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-primary border border-border-subtle font-bold">
-                            Location Reference Target
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pl-2 space-y-1.5 font-mono text-[11px]">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                          {clue.targetLocation.lat.toFixed(5)}°, {clue.targetLocation.lng.toFixed(5)}°
-                        </span>
-                        <span className="bg-sky-950/60 text-sky-300 border border-sky-800 px-2 py-0.5 rounded font-bold">
-                          Activation Zone: {clue.targetRadiusMeters || 100}m
-                        </span>
-                      </div>
-                      {clue.aiCriteria && (
-                        <div className="text-text-secondary text-[10px] bg-surface-container-low p-2 rounded border border-border-subtle/50">
-                          <span className="font-bold text-primary">Criteria:</span> {clue.aiCriteria}
-                        </div>
-                      )}
-                    </div>
+                      <span className="material-symbols-outlined text-xs">travel_explore</span>
+                      <span>Generate "{item.name}" Course</span>
+                    </button>
                   </div>
-                  );
-                })}
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Section: Course Clues */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">03</div>
+                <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues ({course.clues.length})</h2>
               </div>
-            </section>
-
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Interactive Map Canvas with Draggable Markers & Routes */}
-        <div className="w-full lg:w-[55%] h-[512px] lg:h-auto relative bg-surface-variant z-0 shadow-inner">
-          <MapLibreView
-            center={[parseFloat(startLng) || course.startLocation.lng, parseFloat(startLat) || course.startLocation.lat]}
-            zoom={15}
-            startLocation={{
-              name: startName,
-              lat: parseFloat(startLat) || course.startLocation.lat,
-              lng: parseFloat(startLng) || course.startLocation.lng,
-              activationRadiusMeters: parseInt(activationRadius, 10) || 100
-            }}
-            finishLocation={{
-              name: finishName,
-              lat: parseFloat(finishLat) || course.finishLocation?.lat || -33.0395,
-              lng: parseFloat(finishLng) || course.finishLocation?.lng || 151.5960
-            }}
-            clues={course.clues}
-            activeClueId={activeClueId}
-            onSelectClue={setActiveClueId}
-            onEditClue={setEditingClue}
-            onUpdateStartLocation={handleUpdateStartLocation}
-            onUpdateFinishLocation={handleUpdateFinishLocation}
-            onUpdateClueLocation={handleUpdateClueLocation}
-          />
-
-          {/* Movable & Collapsible Spatial Analysis Card Overlaying Map */}
-          <div
-            style={{ left: `${cardPos.x}px`, top: `${cardPos.y}px` }}
-            className="absolute lg:w-96 bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-primary/30 z-20 transition-all select-none"
-          >
-            <div
-              onMouseDown={handleAnalysisMouseDown}
-              className="flex items-center justify-between cursor-move pb-2 border-b border-border-subtle/50"
-              title="Click and drag to move Spatial Analysis panel"
-            >
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-base">drag_indicator</span>
-                <span className="font-label-md text-xs font-bold text-on-surface uppercase tracking-wider">Spatial Analysis</span>
-                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-mono text-[10px]">LIVE</span>
+                <button
+                  type="button"
+                  onClick={handleOptimizeRouteOrder}
+                  className="h-9 px-3 rounded-full font-label-md text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all font-bold flex items-center gap-1.5 cursor-pointer shadow-sm font-mono"
+                  title="Auto-Sort Waypoints into Optimal Start-to-Finish Physical Walking Order"
+                >
+                  <span className="material-symbols-outlined text-sm">alt_route</span>
+                  <span>Auto-Sort Route</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingClue(true)}
+                  className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+                  title="Add New Spatial Waypoint"
+                >
+                  <span className="material-symbols-outlined text-base">add</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAnalysisCollapsed(!isAnalysisCollapsed)}
-                className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors cursor-pointer"
-                title={isAnalysisCollapsed ? "Expand Panel" : "Collapse Panel"}
-              >
-                <span className="material-symbols-outlined text-base">
-                  {isAnalysisCollapsed ? 'unfold_more' : 'unfold_less'}
-                </span>
-              </button>
             </div>
 
-            {!isAnalysisCollapsed && (
-              <div className="space-y-2 mt-3">
-                <div className="flex justify-between items-center text-body-sm">
-                  <span className="text-text-secondary">Start Location</span>
-                  <span className="font-mono text-on-surface text-xs font-bold truncate max-w-[200px]" title={startName}>{startName}</span>
+            {/* Waypoint Cards List with Move Up, Move Down, Edit & Delete */}
+            <div className="space-y-4">
+              {course.clues.map((clue, idx) => {
+                const label = getWaypointLabel(idx);
+                const isActive = clue.id === activeClueId;
+
+                return (
+                  <div
+                    key={clue.id}
+                    onClick={() => setActiveClueId(clue.id)}
+                    className={`p-5 rounded-xl border-l-4 shadow-sm group hover:shadow-md transition-all relative cursor-pointer ${
+                      isActive
+                        ? 'bg-primary/10 border-l-primary border border-primary/30 ring-2 ring-primary/20'
+                        : 'bg-surface-container-lowest border-l-primary border border-border-subtle'
+                    }`}
+                  >
+                    <div className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-mono font-bold text-xs shadow-sm uppercase">
+                      {label}
+                    </div>
+
+                    <div className="flex justify-between items-start mb-2 pl-2">
+                      <div>
+                        <h4 className="font-label-md text-label-md text-on-surface flex items-center gap-2">
+                          <span>Waypoint {label}: {clue.title}</span>
+                          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{clue.category}</span>
+                        </h4>
+                      </div>
+
+                    {/* Waypoint Action Controls: Move Up, Move Down, Edit, Delete */}
+                    <div className="flex items-center gap-1">
+                      <span className="bg-secondary-container text-on-secondary-container px-2 py-1 rounded font-label-sm font-bold text-xs mr-2">
+                        {clue.points} PTS
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMoveClue(clue.id, 'UP')}
+                        disabled={idx === 0}
+                        title="Move Waypoint Up"
+                        className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-base">arrow_upward</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMoveClue(clue.id, 'DOWN')}
+                        disabled={idx === course.clues.length - 1}
+                        title="Move Waypoint Down"
+                        className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-base">arrow_downward</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setEditingClue({ ...clue })}
+                        title="Edit Waypoint & Verification Criteria"
+                        className="p-1 rounded bg-surface-container hover:bg-primary/10 text-on-surface-variant hover:text-primary cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-base">edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteClue(clue.id)}
+                        title="Delete Waypoint"
+                        className="p-1 rounded bg-surface-container hover:bg-error-container text-on-surface-variant hover:text-error cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">{clue.description}</p>
+
+                  {/* Location Reference Photo Preview in Admin Sidebar */}
+                  {clue.referencePhotoUrl && (
+                    <div className="pl-2 mb-3">
+                      <div className="relative rounded-lg overflow-hidden border border-border-subtle max-h-28 group">
+                        <img src={clue.referencePhotoUrl} alt={clue.title} className="w-full h-28 object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute bottom-1 left-1 bg-surface/85 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-primary border border-border-subtle font-bold">
+                          Location Reference Target
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pl-2 space-y-1.5 font-mono text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded uppercase font-bold tracking-wider">
+                        {clue.targetLocation.lat.toFixed(5)}°, {clue.targetLocation.lng.toFixed(5)}°
+                      </span>
+                      <span className="bg-sky-950/60 text-sky-300 border border-sky-800 px-2 py-0.5 rounded font-bold">
+                        Activation Zone: {clue.targetRadiusMeters || 100}m
+                      </span>
+                    </div>
+                    {clue.aiCriteria && (
+                      <div className="text-text-secondary text-[10px] bg-surface-container-low p-2 rounded border border-border-subtle/50">
+                        <span className="font-bold text-primary">Criteria:</span> {clue.aiCriteria}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-body-sm">
-                  <span className="text-text-secondary">Start Lat/Lng</span>
-                  <span className="font-mono text-on-surface text-xs font-bold">{parseFloat(startLat).toFixed(4)}°, {parseFloat(startLng).toFixed(4)}°</span>
-                </div>
-                <div className="flex justify-between items-center text-body-sm">
-                  <span className="text-text-secondary">Finish Location</span>
-                  <span className="font-mono text-rose-400 text-xs font-bold truncate max-w-[200px]" title={finishName}>{finishName}</span>
-                </div>
-                <div className="flex justify-between items-center text-body-sm">
-                  <span className="text-text-secondary">Activation Radius</span>
-                  <span className="font-mono text-primary font-bold">{activationRadius} meters</span>
-                </div>
-                <div className="flex justify-between items-center text-body-sm">
-                  <span className="text-text-secondary">Total Distance</span>
-                  <span className="font-mono text-on-surface font-bold">{courseMetrics.totalDistanceKm}</span>
-                </div>
-                <div className="flex justify-between items-center text-body-sm">
-                  <span className="text-text-secondary">Est. Completion</span>
-                  <span className="font-mono text-on-surface font-bold">{courseMetrics.estTime}</span>
-                </div>
-                <div className="w-full h-1.5 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
-                  <div className="h-full bg-primary rounded-full w-[100%]"></div>
-                </div>
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          </section>
 
         </div>
+
+        {/* BOTTOM SECTION: Interactive Map Canvas placed right before footer */}
+        <section className="w-full pt-6 border-t border-border-subtle space-y-3">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">04</div>
+              <div>
+                <h2 className="font-headline-md text-headline-md text-on-surface">Course Map & Route Preview</h2>
+                <p className="text-xs text-text-secondary">Drag markers to reposition Start, Finish, and Waypoint pins directly on the map.</p>
+              </div>
+            </div>
+
+            {/* Toggles: Points without routes and without A-Z labelling */}
+            <div className="flex items-center gap-3 bg-surface-container border border-border-subtle p-2 rounded-xl text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setShowPlannerRoute(!showPlannerRoute)}
+                className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                  showPlannerRoute
+                    ? 'bg-primary text-on-primary font-bold border-primary'
+                    : 'bg-surface-variant text-text-secondary border-border-subtle hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">timeline</span>
+                <span>{showPlannerRoute ? 'Route Lines ON' : 'No Routes (Points Only)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPlannerLabels(!showPlannerLabels)}
+                className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                  showPlannerLabels
+                    ? 'bg-primary text-on-primary font-bold border-primary'
+                    : 'bg-surface-variant text-text-secondary border-border-subtle hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">label</span>
+                <span>{showPlannerLabels ? 'A-Z Labels ON' : 'No Labels'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full h-[550px] relative rounded-2xl overflow-hidden bg-surface-variant border border-border-subtle shadow-2xl">
+            <MapLibreView
+              center={[parseFloat(startLng) || course.startLocation.lng, parseFloat(startLat) || course.startLocation.lat]}
+              zoom={15}
+              isPlanning={true}
+              showRouteLine={showPlannerRoute}
+              showWaypointLabels={showPlannerLabels}
+              startLocation={{
+                name: startName,
+                lat: parseFloat(startLat) || course.startLocation.lat,
+                lng: parseFloat(startLng) || course.startLocation.lng,
+                activationRadiusMeters: parseInt(activationRadius, 10) || 50
+              }}
+              finishLocation={{
+                name: finishName,
+                lat: parseFloat(finishLat) || course.finishLocation?.lat || -33.0395,
+                lng: parseFloat(finishLng) || course.finishLocation?.lng || 151.5960
+              }}
+              clues={course.clues}
+              activeClueId={activeClueId}
+              onSelectClue={setActiveClueId}
+              onEditClue={setEditingClue}
+              onUpdateStartLocation={handleUpdateStartLocation}
+              onUpdateFinishLocation={handleUpdateFinishLocation}
+              onUpdateClueLocation={handleUpdateClueLocation}
+            />
+
+            {/* Movable & Collapsible Spatial Analysis Card Overlaying Map */}
+            <div
+              style={{ left: `${cardPos.x}px`, top: `${cardPos.y}px` }}
+              className="absolute lg:w-96 bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-primary/30 z-20 transition-all select-none"
+            >
+              <div
+                onMouseDown={handleAnalysisMouseDown}
+                className="flex items-center justify-between cursor-move pb-2 border-b border-border-subtle/50"
+                title="Click and drag to move Spatial Analysis panel"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-base">drag_indicator</span>
+                  <span className="font-label-md text-xs font-bold text-on-surface uppercase tracking-wider">Spatial Analysis</span>
+                  <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-mono text-[10px]">LIVE</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAnalysisCollapsed(!isAnalysisCollapsed)}
+                  className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors cursor-pointer"
+                  title={isAnalysisCollapsed ? "Expand Panel" : "Collapse Panel"}
+                >
+                  <span className="material-symbols-outlined text-base">
+                    {isAnalysisCollapsed ? 'unfold_more' : 'unfold_less'}
+                  </span>
+                </button>
+              </div>
+
+              {!isAnalysisCollapsed && (
+                <div className="space-y-2 mt-3">
+                  <div className="flex justify-between items-center text-body-sm">
+                    <span className="text-text-secondary">Start Location</span>
+                    <span className="font-mono text-on-surface text-xs font-bold truncate max-w-[200px]" title={startName}>{startName}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm">
+                    <span className="text-text-secondary">Start Lat/Lng</span>
+                    <span className="font-mono text-on-surface text-xs font-bold">{parseFloat(startLat).toFixed(4)}°, {parseFloat(startLng).toFixed(4)}°</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm">
+                    <span className="text-text-secondary">Finish Location</span>
+                    <span className="font-mono text-rose-400 text-xs font-bold truncate max-w-[200px]" title={finishName}>{finishName}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm">
+                    <span className="text-text-secondary">Activation Radius</span>
+                    <span className="font-mono text-primary font-bold">{activationRadius} meters</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm">
+                    <span className="text-text-secondary">Total Distance</span>
+                    <span className="font-mono text-on-surface font-bold">{courseMetrics.totalDistanceKm}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm">
+                    <span className="text-text-secondary">Est. Completion</span>
+                    <span className="font-mono text-on-surface font-bold">{courseMetrics.estTime}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-primary rounded-full w-[100%]"></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
       </div>
 

@@ -28,21 +28,12 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-5">
             <button
-              onClick={() => handleTabChange('ADMIN')}
-              className={`transition-colors uppercase text-label-md ${
-                activeTab === 'ADMIN' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
-              }`}
-            >
-              Planner
-            </button>
-
-            <button
               onClick={() => handleTabChange('PLAYER')}
               className={`transition-colors uppercase text-label-md flex items-center gap-1.5 ${
                 activeTab === 'PLAYER' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
               }`}
             >
-              <span>Clue Runner</span>
+              <span>Runner</span>
             </button>
 
             <button
@@ -55,12 +46,21 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
             </button>
 
             <button
+              onClick={() => handleTabChange('ADMIN')}
+              className={`transition-colors uppercase text-label-md ${
+                activeTab === 'ADMIN' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
+              }`}
+            >
+              Course Manager
+            </button>
+
+            <button
               onClick={() => handleTabChange('ISSUES')}
               className={`transition-colors uppercase text-label-md flex items-center gap-1.5 ${
                 activeTab === 'ISSUES' ? 'text-theme-primary font-bold' : 'text-theme-sub hover:text-theme-main'
               }`}
             >
-              <span>Issue Tracker</span>
+              <span>Bugs</span>
             </button>
 
             <button
@@ -148,25 +148,10 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
             >
               <span className="material-symbols-outlined text-[22px]">directions_run</span>
               <div className="flex flex-col">
-                <span className="text-sm">Mobile Clue Runner</span>
+                <span className="text-sm">Runner</span>
                 <span className="text-[10px] opacity-75">Field GPS & Clue Capture App</span>
               </div>
               <span className="ml-auto text-[10px] bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full font-bold uppercase">Active</span>
-            </button>
-
-            <button
-              onClick={() => handleTabChange('ADMIN')}
-              className={`w-full text-left py-3 px-3.5 rounded-xl flex items-center gap-3 font-semibold transition-all ${
-                activeTab === 'ADMIN'
-                  ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
-                  : 'text-on-surface hover:bg-surface-container'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[22px]">map</span>
-              <div className="flex flex-col">
-                <span className="text-sm">Admin Course Planner</span>
-                <span className="text-[10px] opacity-75">Design Waypoints & Geofences</span>
-              </div>
             </button>
 
             <button
@@ -185,6 +170,21 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
             </button>
 
             <button
+              onClick={() => handleTabChange('ADMIN')}
+              className={`w-full text-left py-3 px-3.5 rounded-xl flex items-center gap-3 font-semibold transition-all ${
+                activeTab === 'ADMIN'
+                  ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+                  : 'text-on-surface hover:bg-surface-container'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[22px]">map</span>
+              <div className="flex flex-col">
+                <span className="text-sm">Course Manager</span>
+                <span className="text-[10px] opacity-75">Design Waypoints & Geofences</span>
+              </div>
+            </button>
+
+            <button
               onClick={() => handleTabChange('ISSUES')}
               className={`w-full text-left py-3 px-3.5 rounded-xl flex items-center gap-3 font-semibold transition-all ${
                 activeTab === 'ISSUES'
@@ -194,7 +194,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
             >
               <span className="material-symbols-outlined text-[22px]">bug_report</span>
               <div className="flex flex-col">
-                <span className="text-sm">Issue & Feature Backlog</span>
+                <span className="text-sm">Bugs</span>
                 <span className="text-[10px] opacity-75">Bugs, Upvoting & Enhancements</span>
               </div>
             </button>
@@ -202,7 +202,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
         )}
       </header>
 
-      {/* Mobile Fixed Bottom Navigation Bar (1-thumb touch navigation for mobile phones) */}
+      {/* Mobile Fixed Bottom Navigation Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border-subtle shadow-xl px-2 py-1.5 flex justify-around items-center">
         <button
           onClick={() => handleTabChange('PLAYER')}
@@ -213,19 +213,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
           }`}
         >
           <span className="material-symbols-outlined text-[24px]">directions_run</span>
-          <span className="text-[10px] tracking-tight mt-0.5 font-bold">Clue Runner</span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('ADMIN')}
-          className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition-all ${
-            activeTab === 'ADMIN'
-              ? 'text-primary font-bold bg-primary-fixed/50 scale-105'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[24px]">map</span>
-          <span className="text-[10px] tracking-tight mt-0.5">Planner</span>
+          <span className="text-[10px] tracking-tight mt-0.5 font-bold">Runner</span>
         </button>
 
         <button
@@ -237,7 +225,19 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
           }`}
         >
           <span className="material-symbols-outlined text-[24px]">leaderboard</span>
-          <span className="text-[10px] tracking-tight mt-0.5">Leaderboard</span>
+          <span className="text-[10px] tracking-tight mt-0.5 font-bold">Leaderboard</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('ADMIN')}
+          className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition-all ${
+            activeTab === 'ADMIN'
+              ? 'text-primary font-bold bg-primary-fixed/50 scale-105'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[24px]">map</span>
+          <span className="text-[10px] tracking-tight mt-0.5 font-bold">Course Manager</span>
         </button>
 
         <button
@@ -249,7 +249,7 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
           }`}
         >
           <span className="material-symbols-outlined text-[24px]">bug_report</span>
-          <span className="text-[10px] tracking-tight mt-0.5">Issues</span>
+          <span className="text-[10px] tracking-tight mt-0.5 font-bold">Bugs</span>
         </button>
 
         <button

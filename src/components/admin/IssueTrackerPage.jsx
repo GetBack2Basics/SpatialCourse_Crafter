@@ -88,12 +88,23 @@ export default function IssueTrackerPage() {
   });
 
   // Filter & Search State
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedIssueIds, setExpandedIssueIds] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSeverities, setSelectedSeverities] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [sortBy, setSortBy] = useState('PRIORITY'); // PRIORITY, UPVOTES, SEVERITY, DATE
+
+  const toggleIssueExpanded = (id) => {
+    setExpandedIssueIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -396,8 +407,8 @@ export default function IssueTrackerPage() {
         </form>
       )}
 
-      {/* Filtering & Live Search Controls */}
-      <div className="bg-theme-surface border border-theme rounded-2xl p-5 shadow-lg space-y-4">
+      {/* Filtering & Live Search Controls - Collapsible */}
+      <div className="bg-theme-surface border border-theme rounded-2xl p-4 shadow-lg space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           {/* Live Search */}
           <div className="relative flex-1">
@@ -411,96 +422,111 @@ export default function IssueTrackerPage() {
             />
           </div>
 
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase text-theme-sub">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-theme-container border border-theme text-theme-main text-sm focus:outline-none focus:ring-2 focus:ring-theme-primary"
+          <div className="flex items-center gap-3">
+            {/* Filter Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-3.5 py-2 rounded-xl bg-theme-container border border-theme text-theme-main text-xs font-semibold hover:bg-theme-primary/10 transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <option value="PRIORITY">Priority Rank (P0 -&gt; P3)</option>
-              <option value="UPVOTES">Most Upvoted</option>
-              <option value="SEVERITY">Highest Severity</option>
-              <option value="DATE">Newest First</option>
-            </select>
+              <span className="material-symbols-outlined text-base">filter_list</span>
+              <span>Filter Options</span>
+              <span className="material-symbols-outlined text-base">{showFilters ? 'expand_less' : 'expand_more'}</span>
+            </button>
+
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase text-theme-sub">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-theme-container border border-theme text-theme-main text-sm focus:outline-none focus:ring-2 focus:ring-theme-primary"
+              >
+                <option value="PRIORITY">Priority Rank (P0 -&gt; P3)</option>
+                <option value="UPVOTES">Most Upvoted</option>
+                <option value="SEVERITY">Highest Severity</option>
+                <option value="DATE">Newest First</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Multi-select filter chips */}
-        <div className="space-y-2 pt-2 border-t border-theme/50 text-xs">
-          {/* Categories */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-theme-sub w-20">Category:</span>
-            {['BUG', 'FEATURE', 'ENHANCEMENT', 'UI_UX', 'PERFORMANCE'].map(cat => (
-              <button
-                key={cat}
-                onClick={() => toggleMultiSelect(cat, setSelectedCategories)}
-                className={`px-2.5 py-1 rounded-lg border transition-all ${
-                  selectedCategories.includes(cat)
-                    ? 'bg-theme-primary text-black font-bold border-theme-primary'
-                    : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+        {/* Collapsible Multi-select filter chips */}
+        {showFilters && (
+          <div className="space-y-2 pt-2 border-t border-theme/50 text-xs animate-in fade-in duration-200">
+            {/* Categories */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-theme-sub w-20">Category:</span>
+              {['BUG', 'FEATURE', 'ENHANCEMENT', 'UI_UX', 'PERFORMANCE'].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => toggleMultiSelect(cat, setSelectedCategories)}
+                  className={`px-2.5 py-1 rounded-lg border transition-all ${
+                    selectedCategories.includes(cat)
+                      ? 'bg-theme-primary text-black font-bold border-theme-primary'
+                      : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
 
-          {/* Severity */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-theme-sub w-20">Severity:</span>
-            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(sev => (
-              <button
-                key={sev}
-                onClick={() => toggleMultiSelect(sev, setSelectedSeverities)}
-                className={`px-2.5 py-1 rounded-lg border transition-all ${
-                  selectedSeverities.includes(sev)
-                    ? 'bg-theme-primary text-black font-bold border-theme-primary'
-                    : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
-                }`}
-              >
-                {sev}
-              </button>
-            ))}
-          </div>
+            {/* Severity */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-theme-sub w-20">Severity:</span>
+              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(sev => (
+                <button
+                  key={sev}
+                  onClick={() => toggleMultiSelect(sev, setSelectedSeverities)}
+                  className={`px-2.5 py-1 rounded-lg border transition-all ${
+                    selectedSeverities.includes(sev)
+                      ? 'bg-theme-primary text-black font-bold border-theme-primary'
+                      : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
+                  }`}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
 
-          {/* Priority */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-theme-sub w-20">Priority:</span>
-            {['P0_BLOCKER', 'P1_HIGH', 'P2_MEDIUM', 'P3_LOW'].map(prio => (
-              <button
-                key={prio}
-                onClick={() => toggleMultiSelect(prio, setSelectedPriorities)}
-                className={`px-2.5 py-1 rounded-lg border transition-all ${
-                  selectedPriorities.includes(prio)
-                    ? 'bg-theme-primary text-black font-bold border-theme-primary'
-                    : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
-                }`}
-              >
-                {prio}
-              </button>
-            ))}
-          </div>
+            {/* Priority */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-theme-sub w-20">Priority:</span>
+              {['P0_BLOCKER', 'P1_HIGH', 'P2_MEDIUM', 'P3_LOW'].map(prio => (
+                <button
+                  key={prio}
+                  onClick={() => toggleMultiSelect(prio, setSelectedPriorities)}
+                  className={`px-2.5 py-1 rounded-lg border transition-all ${
+                    selectedPriorities.includes(prio)
+                      ? 'bg-theme-primary text-black font-bold border-theme-primary'
+                      : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
+                  }`}
+                >
+                  {prio}
+                </button>
+              ))}
+            </div>
 
-          {/* Status */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-theme-sub w-20">Status:</span>
-            {['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(status => (
-              <button
-                key={status}
-                onClick={() => toggleMultiSelect(status, setSelectedStatuses)}
-                className={`px-2.5 py-1 rounded-lg border transition-all ${
-                  selectedStatuses.includes(status)
-                    ? 'bg-theme-primary text-black font-bold border-theme-primary'
-                    : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+            {/* Status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-theme-sub w-20">Status:</span>
+              {['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => toggleMultiSelect(status, setSelectedStatuses)}
+                  className={`px-2.5 py-1 rounded-lg border transition-all ${
+                    selectedStatuses.includes(status)
+                      ? 'bg-theme-primary text-black font-bold border-theme-primary'
+                      : 'bg-theme-container border-theme text-theme-sub hover:text-theme-main'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Clear Filters Reset */}
         {(selectedCategories.length > 0 || selectedSeverities.length > 0 || selectedPriorities.length > 0 || selectedStatuses.length > 0 || searchQuery) && (
@@ -523,9 +549,10 @@ export default function IssueTrackerPage() {
       </div>
 
       {/* Backlog List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between text-sm text-theme-sub px-1">
           <span>Showing <strong>{filteredAndSortedIssues.length}</strong> of {issues.length} backlog items</span>
+          <span className="text-xs text-theme-sub italic">Click issue row to expand/collapse details</span>
         </div>
 
         {filteredAndSortedIssues.length === 0 ? (
@@ -535,81 +562,100 @@ export default function IssueTrackerPage() {
             <p className="text-xs opacity-75">Try clearing filters or search terms.</p>
           </div>
         ) : (
-          filteredAndSortedIssues.map(issue => (
-            <div
-              key={issue.id}
-              className="bg-theme-surface border border-theme rounded-2xl p-5 shadow-md hover:shadow-lg transition-all flex flex-col md:flex-row items-start gap-4 justify-between"
-            >
-              {/* Left Column: Upvote button */}
-              <div className="flex md:flex-col items-center justify-center gap-1 bg-theme-container border border-theme p-2.5 rounded-xl min-w-[64px]">
-                <button
-                  onClick={() => handleUpvote(issue.id)}
-                  className="hover:text-theme-primary transition-colors p-1"
-                  title="Upvote feature or issue"
-                >
-                  <span className="material-symbols-outlined text-2xl">thumb_up</span>
-                </button>
-                <span className="font-bold text-sm text-theme-main">{issue.upvotes}</span>
-                <span className="text-[10px] uppercase text-theme-sub hidden md:inline">votes</span>
-              </div>
+          filteredAndSortedIssues.map(issue => {
+            const isExpanded = expandedIssueIds.has(issue.id);
 
-              {/* Center Column: Content */}
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-xs text-theme-sub">{issue.id}</span>
-                  {priorityBadge(issue.priority)}
-                  {severityBadge(issue.severity)}
-                  <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-theme-container text-theme-sub border border-theme flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[13px]">{categoryIcon(issue.category)}</span>
-                    {issue.category}
-                  </span>
+            return (
+              <div
+                key={issue.id}
+                onClick={() => toggleIssueExpanded(issue.id)}
+                className={`bg-theme-surface border border-theme rounded-2xl p-4 shadow-md hover:shadow-lg transition-all cursor-pointer ${
+                  isExpanded ? 'ring-1 ring-theme-primary/40' : ''
+                }`}
+              >
+                {/* Header Summary Row - Visible when collapsed */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUpvote(issue.id);
+                      }}
+                      className="px-2 py-1 rounded-lg bg-theme-container border border-theme hover:text-theme-primary transition-colors font-bold text-xs flex items-center gap-1 shrink-0"
+                      title="Upvote"
+                    >
+                      <span className="material-symbols-outlined text-base">thumb_up</span>
+                      <span>{issue.upvotes}</span>
+                    </button>
+
+                    <span className="font-mono text-xs text-theme-sub shrink-0">{issue.id}</span>
+                    {priorityBadge(issue.priority)}
+                    {severityBadge(issue.severity)}
+                    
+                    <h3 className="text-sm font-bold text-theme-main truncate flex-1 min-w-[200px]">
+                      {issue.title}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-theme-container text-theme-sub border border-theme">
+                      {issue.status}
+                    </span>
+                    <span className="material-symbols-outlined text-theme-sub text-lg">
+                      {isExpanded ? 'expand_less' : 'expand_more'}
+                    </span>
+                  </div>
                 </div>
 
-                <h3 className="text-base font-bold text-theme-main">{issue.title}</h3>
-                <p className="text-sm text-theme-sub leading-relaxed">{issue.description}</p>
+                {/* Expanded Details - Description, Reporter, Status dropdown & Delete */}
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t border-theme/50 space-y-3 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-sm text-theme-sub leading-relaxed">{issue.description}</p>
 
-                {/* Metadata & Tags */}
-                <div className="flex items-center gap-4 flex-wrap text-xs text-theme-sub pt-1">
-                  <span>Reporter: <strong className="text-theme-main">{issue.reporter}</strong></span>
-                  <span>Logged: {new Date(issue.createdAt).toLocaleDateString()}</span>
-                  {issue.tags && issue.tags.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      {issue.tags.map(t => (
-                        <span key={t} className="bg-theme-container/80 text-theme-sub px-2 py-0.5 rounded text-[10px]">
-                          #{t}
-                        </span>
-                      ))}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-theme-sub pt-1">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <span>Reporter: <strong className="text-theme-main">{issue.reporter}</strong></span>
+                        <span>Logged: {new Date(issue.createdAt).toLocaleDateString()}</span>
+                        {issue.tags && issue.tags.length > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            {issue.tags.map(t => (
+                              <span key={t} className="bg-theme-container text-theme-sub px-2 py-0.5 rounded text-[10px]">
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <label className="text-[10px] font-bold uppercase text-theme-sub">Status:</label>
+                          <select
+                            value={issue.status}
+                            onChange={(e) => handleStatusChange(issue.id, e.target.value)}
+                            className="px-2.5 py-1 rounded-lg bg-theme-container border border-theme text-theme-main text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-theme-primary cursor-pointer"
+                          >
+                            <option value="OPEN">OPEN</option>
+                            <option value="IN_PROGRESS">IN PROGRESS</option>
+                            <option value="RESOLVED">RESOLVED</option>
+                            <option value="CLOSED">CLOSED</option>
+                          </select>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteIssue(issue.id)}
+                          className="text-theme-sub hover:text-red-400 transition-colors p-1 cursor-pointer"
+                          title="Delete issue"
+                        >
+                          <span className="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-
-              {/* Right Column: Status & Controls */}
-              <div className="flex flex-row md:flex-col items-end gap-3 min-w-[140px] w-full md:w-auto justify-between md:justify-start pt-2 md:pt-0 border-t md:border-t-0 border-theme">
-                <div className="space-y-1 text-right">
-                  <label className="text-[10px] font-bold uppercase text-theme-sub block">Status</label>
-                  <select
-                    value={issue.status}
-                    onChange={(e) => handleStatusChange(issue.id, e.target.value)}
-                    className="px-2.5 py-1 rounded-lg bg-theme-container border border-theme text-theme-main text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-theme-primary"
-                  >
-                    <option value="OPEN">OPEN</option>
-                    <option value="IN_PROGRESS">IN PROGRESS</option>
-                    <option value="RESOLVED">RESOLVED</option>
-                    <option value="CLOSED">CLOSED</option>
-                  </select>
-                </div>
-
-                <button
-                  onClick={() => handleDeleteIssue(issue.id)}
-                  className="text-theme-sub hover:text-red-400 transition-colors p-1"
-                  title="Delete issue"
-                >
-                  <span className="material-symbols-outlined text-lg">delete</span>
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

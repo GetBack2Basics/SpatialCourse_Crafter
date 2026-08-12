@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function HelpModal({ isOpen, onClose }) {
-  const [activeHelpTab, setActiveHelpTab] = useState('ISSUES');
+  const [activeHelpTab, setActiveHelpTab] = useState('RUNNER');
 
   if (!isOpen) return null;
 
@@ -28,30 +28,6 @@ export default function HelpModal({ isOpen, onClose }) {
         {/* Navigation Tabs */}
         <div className="flex items-center border-b border-theme bg-theme-surface px-4 overflow-x-auto text-xs font-semibold uppercase tracking-wider">
           <button
-            onClick={() => setActiveHelpTab('ISSUES')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'ISSUES'
-                ? 'border-theme-primary text-theme-primary font-bold'
-                : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">bug_report</span>
-            Issue Tracker & Backlog
-          </button>
-
-          <button
-            onClick={() => setActiveHelpTab('PLANNER')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'PLANNER'
-                ? 'border-theme-primary text-theme-primary font-bold'
-                : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">map</span>
-            Course Planner
-          </button>
-
-          <button
             onClick={() => setActiveHelpTab('RUNNER')}
             className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeHelpTab === 'RUNNER'
@@ -60,7 +36,7 @@ export default function HelpModal({ isOpen, onClose }) {
             }`}
           >
             <span className="material-symbols-outlined text-base">directions_run</span>
-            Clue Runner
+            Runner
           </button>
 
           <button
@@ -72,7 +48,31 @@ export default function HelpModal({ isOpen, onClose }) {
             }`}
           >
             <span className="material-symbols-outlined text-base">leaderboard</span>
-            Leaderboard & AI Scoring
+            Leaderboard
+          </button>
+
+          <button
+            onClick={() => setActiveHelpTab('PLANNER')}
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+              activeHelpTab === 'PLANNER'
+                ? 'border-theme-primary text-theme-primary font-bold'
+                : 'border-transparent text-theme-sub hover:text-theme-main'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">map</span>
+            Course Manager
+          </button>
+
+          <button
+            onClick={() => setActiveHelpTab('ISSUES')}
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+              activeHelpTab === 'ISSUES'
+                ? 'border-theme-primary text-theme-primary font-bold'
+                : 'border-transparent text-theme-sub hover:text-theme-main'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">bug_report</span>
+            Bugs
           </button>
         </div>
 
@@ -143,11 +143,22 @@ export default function HelpModal({ isOpen, onClose }) {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-theme-primary font-bold text-base">
                 <span className="material-symbols-outlined">directions_run</span>
-                <h3>Mobile Clue Runner</h3>
+                <h3>Runner & Field Operations</h3>
               </div>
               <p className="text-theme-sub">
                 Field app for mobile competitors. Captures real-time GPS coordinates, calculates distance & azimuth bearings to waypoints, records attribute data, and queues submissions offline.
               </p>
+              <div className="space-y-2 text-xs text-theme-sub border-t border-theme/40 pt-3">
+                <p>
+                  <strong>Technical Resilience & Field Backup:</strong> Discrete controls on the runner map canvas allow teams to save a JSON progress snapshot or upload a JSON backup file to restore progress if hardware or network connection fails. Teams can also generate a print-optimized paper guide (with masked bounding box zones for hidden waypoints) to continue on paper.
+                </p>
+                <p>
+                  Teams that proactively save progress backups as they advance through waypoints earn technical failure preparedness bonus points (+25 PTS base + 10 PTS per save) on the scoring leaderboard for anticipating tech failures.
+                </p>
+                <p>
+                  <strong>Leaderboard Unlocking:</strong> Non-admin player access to the Leaderboard unlocks once your team completes all waypoints and locks your final submission.
+                </p>
+              </div>
             </div>
           )}
 

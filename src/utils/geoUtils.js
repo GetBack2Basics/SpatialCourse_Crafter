@@ -158,12 +158,16 @@ export async function parsePhotoExif(file) {
 }
 
 /**
- * Converts zero-based or one-based index/number to lowercase letter label ('a', 'b', 'c' ... 'z', 'aa', 'ab'...)
+ * Converts index to letter label ('a', 'b', 'c'...).
+ * By default scrambles the index non-sequentially so competitors cannot infer optimal route order from letter sequence.
  */
-export function getWaypointLabel(index) {
+export function getWaypointLabel(index, scramble = true) {
   const num = typeof index === 'number' ? index : (parseInt(index, 10) - 1 || 0);
-  const idx = num < 0 ? 0 : num;
+  const rawIdx = num < 0 ? 0 : num;
   
+  // Non-sequential deterministic scramble (e.g. idx 0 -> f, idx 1 -> m, idx 2 -> t)
+  const idx = scramble ? (rawIdx * 7 + 5) % 26 : rawIdx;
+
   if (idx < 26) {
     return String.fromCharCode(97 + idx);
   }
