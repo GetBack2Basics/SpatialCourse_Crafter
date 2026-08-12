@@ -98,17 +98,19 @@ class AuthService {
     }
     
     // Async fetch from cloud
-    fetch('/api/users')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.users && data.users.length > 0) {
-          this.users = data.users;
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(data.users));
+    if (typeof window !== 'undefined' && window.location) {
+      fetch('/api/users')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.users && data.users.length > 0) {
+            this.users = data.users;
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(data.users));
+            }
+            this.notify();
           }
-          this.notify();
-        }
-      }).catch(err => console.warn('Cloud sync failed for users:', err));
+        }).catch(err => console.warn('Cloud sync failed for users:', err));
+    }
 
     return localUsers;
   }
@@ -120,11 +122,13 @@ class AuthService {
     }
     
     // Cloud sync
-    fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(users)
-    }).catch(err => console.warn('Failed to sync users to cloud:', err));
+    if (typeof window !== 'undefined' && window.location) {
+      fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(users)
+      }).catch(err => console.warn('Failed to sync users to cloud:', err));
+    }
     
     this.notify();
   }
@@ -146,17 +150,19 @@ class AuthService {
     }
 
     // Async fetch from cloud
-    fetch('/api/teams')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.teams && data.teams.length > 0) {
-          this.teams = data.teams;
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(TEAMS_STORAGE_KEY, JSON.stringify(data.teams));
+    if (typeof window !== 'undefined' && window.location) {
+      fetch('/api/teams')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.teams && data.teams.length > 0) {
+            this.teams = data.teams;
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem(TEAMS_STORAGE_KEY, JSON.stringify(data.teams));
+            }
+            this.notify();
           }
-          this.notify();
-        }
-      }).catch(err => console.warn('Cloud sync failed for teams:', err));
+        }).catch(err => console.warn('Cloud sync failed for teams:', err));
+    }
 
     return localTeams;
   }
@@ -168,11 +174,13 @@ class AuthService {
     }
     
     // Cloud sync
-    fetch('/api/teams', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(teams)
-    }).catch(err => console.warn('Failed to sync teams to cloud:', err));
+    if (typeof window !== 'undefined' && window.location) {
+      fetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teams)
+      }).catch(err => console.warn('Failed to sync teams to cloud:', err));
+    }
 
     this.notify();
   }

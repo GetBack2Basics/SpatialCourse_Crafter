@@ -31,37 +31,39 @@ export async function generateCourseWithLLM({
 
   try {
     // Attempt backend API call first
-    const response = await fetch('/api/generate-course', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        theme,
-        startLocation: { name: startName, lat: startLat, lng: startLng },
-        finishLocation: { name: finishName, lat: finishLat, lng: finishLng },
-        durationMinutes: parseInt(durationMinutes, 10) || 60,
-        targetWaypointCount,
-        spatialMetrics: optimalCalculation
-      })
-    });
+    if (typeof window !== 'undefined' && window.location) {
+      const response = await fetch('/api/generate-course', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          theme,
+          startLocation: { name: startName, lat: startLat, lng: startLng },
+          finishLocation: { name: finishName, lat: finishLat, lng: finishLng },
+          durationMinutes: parseInt(durationMinutes, 10) || 60,
+          targetWaypointCount,
+          spatialMetrics: optimalCalculation
+        })
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success && data.course && Array.isArray(data.course.clues)) {
-        // Sanitize non-public land items and optimize route sequence
-        const validClues = data.course.clues.filter(c => isWaypointPublicLandAccessible(c));
-        const orderedClues = optimizeRouteSequence(
-          { lat: startLat, lng: startLng },
-          validClues.length > 0 ? validClues : data.course.clues,
-          { lat: finishLat, lng: finishLng }
-        );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.course && Array.isArray(data.course.clues)) {
+          // Sanitize non-public land items and optimize route sequence
+          const validClues = data.course.clues.filter(c => isWaypointPublicLandAccessible(c));
+          const orderedClues = optimizeRouteSequence(
+            { lat: startLat, lng: startLng },
+            validClues.length > 0 ? validClues : data.course.clues,
+            { lat: finishLat, lng: finishLng }
+          );
 
-        const sanitizedCourse = {
-          ...data.course,
-          clues: orderedClues
-        };
+          const sanitizedCourse = {
+            ...data.course,
+            clues: orderedClues
+          };
 
-        wsService.emitLog('AI_QA', `✨ Gemini AI successfully generated & route-optimized course "${sanitizedCourse.title}" with ${sanitizedCourse.clues.length} waypoints.`);
-        return sanitizedCourse;
+          wsService.emitLog('AI_QA', `✨ Gemini AI successfully generated & route-optimized course "${sanitizedCourse.title}" with ${sanitizedCourse.clues.length} waypoints.`);
+          return sanitizedCourse;
+        }
       }
     }
   } catch (e) {
