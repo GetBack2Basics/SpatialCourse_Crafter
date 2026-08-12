@@ -31,6 +31,12 @@ export default function CoursePlanner({
   const [finishLat, setFinishLat] = useState(course.finishLocation?.lat ?? -33.0395);
   const [finishLng, setFinishLng] = useState(course.finishLocation?.lng ?? 151.5960);
 
+  // Collapsible section state for Course Planner
+  const [isSection1Open, setIsSection1Open] = useState(true);
+  const [isSection2Open, setIsSection2Open] = useState(true);
+  const [isSection3Open, setIsSection3Open] = useState(true);
+  const [isSection4Open, setIsSection4Open] = useState(true);
+
   // Quick Paste raw coordinates / maps link state
   const [rawCoordText, setRawCoordText] = useState('');
   const [parsedNotice, setParsedNotice] = useState(null);
@@ -528,6 +534,8 @@ export default function CoursePlanner({
       };
 
       onUpdateCourse(importedCourse);
+      setIsSection1Open(false);
+      setIsSection2Open(false);
       showToast(`✅ Imported course "${importedCourse.title}" with ${sanitizedClues.length} waypoints!`);
       wsService.emitLog('SYSTEM', `Imported course JSON: "${importedCourse.title}" with ${sanitizedClues.length} waypoints.`);
       return true;
@@ -580,6 +588,8 @@ export default function CoursePlanner({
         setTitle(generated.title);
         setTheme(selectedTheme);
         onUpdateCourse(generated);
+        setIsSection1Open(false);
+        setIsSection2Open(false);
         showToast(`✨ Generated AI course "${generated.title}" with ${generated.clues.length} waypoints!`);
       }
     } catch (err) {
@@ -719,7 +729,11 @@ export default function CoursePlanner({
           </div>
 
           <button
-            onClick={onCreateNewCourse}
+            onClick={() => {
+              onCreateNewCourse();
+              setIsSection1Open(false);
+              setIsSection2Open(false);
+            }}
             className="h-9 px-4 rounded-full font-label-md text-xs bg-secondary-container text-on-secondary-container hover:bg-secondary/20 transition-all font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <span className="material-symbols-outlined text-sm">add_circle</span>
@@ -816,13 +830,29 @@ export default function CoursePlanner({
         <div className="w-full space-y-12">
           
           {/* Section: Course Parameters */}
-          <section>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">01</div>
-              <h2 className="font-headline-md text-headline-md text-on-surface">Course Parameters</h2>
-            </div>
+          <section className="bg-surface-container-lowest border border-border-subtle rounded-2xl p-5 shadow-sm transition-all">
+            <button
+              type="button"
+              onClick={() => setIsSection1Open(!isSection1Open)}
+              className="w-full flex items-center justify-between cursor-pointer focus:outline-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">01</div>
+                <div className="text-left">
+                  <h2 className="font-headline-md text-headline-md text-on-surface">Course Parameters</h2>
+                  <p className="text-xs text-text-secondary">Title, duration, target waypoints & start/finish location parameters.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-primary font-semibold">{isSection1Open ? 'Expanded' : 'Collapsed'}</span>
+                <span className="material-symbols-outlined text-on-surface-variant text-xl">
+                  {isSection1Open ? 'expand_less' : 'expand_more'}
+                </span>
+              </div>
+            </button>
 
-            <div className="space-y-6">
+            {isSection1Open && (
+              <div className="space-y-6 pt-6 border-t border-border-subtle mt-4">
               <div className="relative group">
                 <label className="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase">Course Title</label>
                 <input
@@ -1136,19 +1166,33 @@ export default function CoursePlanner({
               </div>
 
             </div>
+            )}
           </section>
 
           {/* Section: Theme Selection & AI Web Research Course Generation */}
-          <section className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4">
+          <section className="bg-surface-container-lowest border border-border-subtle rounded-2xl p-5 shadow-sm transition-all">
+            <button
+              type="button"
+              onClick={() => setIsSection2Open(!isSection2Open)}
+              className="w-full flex items-center justify-between cursor-pointer focus:outline-none"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">02</div>
-                <div>
+                <div className="text-left">
                   <h2 className="font-headline-md text-headline-md text-on-surface">Location Theme</h2>
                   <p className="text-xs text-text-secondary">Choose or add a theme to generate custom route waypoints via local AI web research.</p>
                 </div>
               </div>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-primary font-semibold">{isSection2Open ? 'Expanded' : 'Collapsed'}</span>
+                <span className="material-symbols-outlined text-on-surface-variant text-xl">
+                  {isSection2Open ? 'expand_less' : 'expand_more'}
+                </span>
+              </div>
+            </button>
+
+            {isSection2Open && (
+              <div className="space-y-6 pt-6 border-t border-border-subtle mt-4">
 
             {/* Add Custom Theme Form */}
             <form onSubmit={handleAddCustomTheme} className="flex gap-2">
@@ -1227,16 +1271,34 @@ export default function CoursePlanner({
                 );
               })}
             </div>
+            </div>
+            )}
           </section>
 
           {/* Section: Course Clues */}
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">03</div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues ({course.clues.length})</h2>
-              </div>
-              <div className="flex items-center gap-2">
+          <section className="bg-surface-container-lowest border border-border-subtle rounded-2xl p-5 shadow-sm transition-all">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsSection3Open(!isSection3Open)}
+                className="flex items-center justify-between flex-1 cursor-pointer focus:outline-none pr-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">03</div>
+                  <div className="text-left">
+                    <h2 className="font-headline-md text-headline-md text-on-surface">Course Clues ({course.clues.length})</h2>
+                    <p className="text-xs text-text-secondary">Spatial waypoints, photo validation criteria and point values.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-primary font-semibold">{isSection3Open ? 'Expanded' : 'Collapsed'}</span>
+                  <span className="material-symbols-outlined text-on-surface-variant text-xl">
+                    {isSection3Open ? 'expand_less' : 'expand_more'}
+                  </span>
+                </div>
+              </button>
+
+              <div className="flex items-center gap-2 border-l border-border-subtle pl-4">
                 <button
                   type="button"
                   onClick={handleOptimizeRouteOrder}
@@ -1256,6 +1318,9 @@ export default function CoursePlanner({
                 </button>
               </div>
             </div>
+
+            {isSection3Open && (
+              <div className="space-y-4 pt-6 border-t border-border-subtle mt-4">
 
             {/* Waypoint Cards List with Move Up, Move Down, Edit & Delete */}
             <div className="space-y-4">
@@ -1364,20 +1429,34 @@ export default function CoursePlanner({
                 );
               })}
             </div>
+            </div>
+            )}
           </section>
 
         </div>
 
         {/* BOTTOM SECTION: Interactive Map Canvas placed right before footer */}
-        <section className="w-full pt-6 border-t border-border-subtle space-y-3">
+        <section className="w-full pt-6 border-t border-border-subtle space-y-3 bg-surface-container-lowest border rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">04</div>
-              <div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">Course Map & Route Preview</h2>
-                <p className="text-xs text-text-secondary">Drag markers to reposition Start, Finish, and Waypoint pins directly on the map.</p>
+            <button
+              type="button"
+              onClick={() => setIsSection4Open(!isSection4Open)}
+              className="flex items-center justify-between flex-1 cursor-pointer focus:outline-none pr-4 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm font-bold">04</div>
+                <div>
+                  <h2 className="font-headline-md text-headline-md text-on-surface">Course Map & Route Preview</h2>
+                  <p className="text-xs text-text-secondary">Drag markers to reposition Start, Finish, and Waypoint pins directly on the map.</p>
+                </div>
               </div>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-primary font-semibold">{isSection4Open ? 'Expanded' : 'Collapsed'}</span>
+                <span className="material-symbols-outlined text-on-surface-variant text-xl">
+                  {isSection4Open ? 'expand_less' : 'expand_more'}
+                </span>
+              </div>
+            </button>
 
             {/* Toggles: Points without routes and without A-Z labelling */}
             <div className="flex items-center gap-3 bg-surface-container border border-border-subtle p-2 rounded-xl text-xs font-mono">
@@ -1409,7 +1488,8 @@ export default function CoursePlanner({
             </div>
           </div>
 
-          <div className="w-full h-[550px] relative rounded-2xl overflow-hidden bg-surface-variant border border-border-subtle shadow-2xl">
+          {isSection4Open && (
+            <div className="w-full h-[550px] relative rounded-2xl overflow-hidden bg-surface-variant border border-border-subtle shadow-2xl mt-4">
             <MapLibreView
               center={[parseFloat(startLng) || course.startLocation.lng, parseFloat(startLat) || course.startLocation.lat]}
               zoom={15}
@@ -1496,6 +1576,7 @@ export default function CoursePlanner({
               )}
             </div>
           </div>
+          )}
         </section>
 
       </div>
