@@ -15,14 +15,31 @@ export default function Leaderboard({
   activeCourse,
 }) {
   const [ruleWeights, setRuleWeights] = useState(DEFAULT_SCORING_RULES);
-  const [vibePrompt, setVibePrompt] = useState('Reward group photo compliance and high spatial precision');
+  const [vibePrompt, setVibePrompt] = useState('Reward group photo compliance, high spatial precision and elevation endurance');
   const [isValidating, setIsValidating] = useState(false);
+  const [validationNotice, setValidationNotice] = useState(null);
+
+  // Filter submissions relevant to the currently active course clues
+  const activeClueIds = new Set((courseClues || []).map(c => c.id));
+  const activeCourseSubmissions = submissions.filter(s => 
+    s.courseId === selectedCourseId || activeClueIds.has(s.clueId)
+  );
 
   // Run Day 1 Overnight AI Batch Validation
   const handleTriggerAIValidation = async () => {
+    setValidationNotice(null);
     if (onValidationStart) onValidationStart(); // open logs terminal immediately
+
+    if (activeCourseSubmissions.length === 0) {
+      setValidationNotice(`⚠️ No submissions found for project "${activeCourse?.title || 'Current Project'}". Complete course waypoints in Runner to process AI validation!`);
+      if (typeof window !== 'undefined' && window.wsService) {
+        window.wsService.emitLog('WARN', `Validation skipped: Zero submissions found for project "${activeCourse?.title || 'Current Course'}"`);
+      }
+      return;
+    }
+
     setIsValidating(true);
-    const validated = await runDay1OvernightAIValidation(submissions, courseClues);
+    const validated = await runDay1OvernightAIValidation(activeCourseSubmissions, courseClues);
     if (onSubmissionsValidated) onSubmissionsValidated(validated);
     setIsValidating(false);
 
@@ -36,7 +53,7 @@ export default function Leaderboard({
   // Calculate multi-factor leaderboard results from real data
   const leaderboard = calculateLeaderboard(
     teams,
-    submissions,
+    activeCourseSubmissions,
     courseClues,
     ruleWeights,
     activeCourse?.durationMinutes || 60,
@@ -97,17 +114,42 @@ export default function Leaderboard({
             </p>
           </div>
 
-          <button
-            onClick={handleTriggerAIValidation}
-            disabled={isValidating}
-            className="bg-primary hover:bg-primary-dim disabled:opacity-50 text-on-primary font-label-md text-label-md uppercase px-8 py-4 rounded-xl shadow-xl shadow-primary/20 flex items-center gap-3 transition-all transform hover:-translate-y-1 group cursor-pointer"
-          >
-            <span className={`material-symbols-outlined group-hover:rotate-180 transition-transform duration-500 ${isValidating ? 'animate-spin' : ''}`}>
-              {isValidating ? 'autorenew' : 'play_circle'}
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={handleTriggerAIValidation}
+              disabled={isValidating}
+              className={`font-label-md text-label-md uppercase px-8 py-4 rounded-xl shadow-xl flex items-center gap-3 transition-all transform hover:-translate-y-1 group cursor-pointer ${
+                activeCourseSubmissions.length === 0
+                  ? 'bg-surface-container-highest border border-outline-variant/40 text-on-surface-variant hover:border-amber-400/50'
+                  : 'bg-primary hover:bg-primary-dim text-on-primary shadow-primary/20'
+              }`}
+            >
+              <span className={`material-symbols-outlined group-hover:rotate-180 transition-transform duration-500 ${isValidating ? 'animate-spin' : ''}`}>
+                {isValidating ? 'autorenew' : 'play_circle'}
+              </span>
+              <span>{isValidating ? 'Processing Batch...' : 'Run Validation'}</span>
+            </button>
+            <span className="text-[11px] font-mono text-on-surface-variant">
+              {activeCourseSubmissions.length} submission(s) in project
             </span>
-            <span>{isValidating ? 'Processing Batch...' : 'Run Validation'}</span>
-          </button>
+          </div>
         </header>
+
+        {/* Validation Warning Notice */}
+        {validationNotice && (
+          <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl flex items-center justify-between gap-3 text-amber-200 text-sm animate-in fade-in duration-200">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-amber-400">warning</span>
+              <span>{validationNotice}</span>
+            </div>
+            <button
+              onClick={() => setValidationNotice(null)}
+              className="text-amber-400 hover:text-amber-200 font-bold text-xs uppercase"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Project Selector */}
         {courses.length > 0 && (
@@ -278,24 +320,46 @@ export default function Leaderboard({
                   </div>
                 </div>
 
-                {/* Weight Item 5: Time Penalty */}
+                {/* Weight Item 5: Elevation & Terrain Endurance */}
                 <div>
                   <div className="flex justify-between font-label-md text-label-md mb-2">
-                    <span className="text-on-surface-variant">Time Penalty Weight</span>
-                    <span className="text-error font-mono">{ruleWeights.timePenaltyWeight || 10}%</span>
+                    <span className="text-on-surface-variant">Elevation &amp; Terrain Endurance</span>
+                    <span className="text-[#00e5ff] font-mono">{ruleWeights.elevationEnduranceWeight || 10}%</span>
                   </div>
                   <input
                     type="range"
                     min="0"
                     max="100"
-                    value={ruleWeights.timePenaltyWeight || 10}
-                    onChange={e => handleSliderChange('timePenaltyWeight', e.target.value)}
-                    className="w-full accent-error cursor-pointer mb-2"
+                    value={ruleWeights.elevationEnduranceWeight || 10}
+                    onChange={e => handleSliderChange('elevationEnduranceWeight', e.target.value)}
+                    className="w-full accent-[#00e5ff] cursor-pointer mb-2"
                   />
                   <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-error rounded-full transition-all duration-300"
-                      style={{ width: `${ruleWeights.timePenaltyWeight || 10}%` }}
+                      className="h-full bg-[#00e5ff] rounded-full transition-all duration-300"
+                      style={{ width: `${ruleWeights.elevationEnduranceWeight || 10}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Weight Item 6: Field Tech Resilience */}
+                <div>
+                  <div className="flex justify-between font-label-md text-label-md mb-2">
+                    <span className="text-on-surface-variant">Offline Tech Backup &amp; Resilience</span>
+                    <span className="text-primary font-mono">{ruleWeights.techPreparednessWeight || 5}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={ruleWeights.techPreparednessWeight || 5}
+                    onChange={e => handleSliderChange('techPreparednessWeight', e.target.value)}
+                    className="w-full accent-primary cursor-pointer mb-2"
+                  />
+                  <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-300"
+                      style={{ width: `${ruleWeights.techPreparednessWeight || 5}%` }}
                     ></div>
                   </div>
                 </div>

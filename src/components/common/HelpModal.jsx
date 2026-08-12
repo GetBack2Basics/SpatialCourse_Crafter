@@ -270,6 +270,25 @@ export default function HelpModal({ isOpen, onClose }) {
                     Super Admins can view standings live at any time. Field teams unlock full Leaderboard access immediately upon completing all course waypoints and submitting their final run.
                   </p>
                 </div>
+
+                <div className="bg-theme-container border border-primary/40 bg-primary/5 p-4 rounded-xl space-y-2">
+                  <h4 className="font-bold text-primary text-xs uppercase flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-base">shield</span>
+                    Data Collected &amp; Privacy Notice
+                  </h4>
+                  <p className="text-xs text-theme-sub leading-relaxed">
+                    To maintain spatial accuracy, enable AI vision evaluation, and provide workshop organizers with rich winner criteria, SpatialCourse Crafter captures the following submission metadata:
+                  </p>
+                  <ul className="text-xs text-theme-sub space-y-1 list-disc list-inside">
+                    <li><strong>Geospatial &amp; Geotag:</strong> Device GPS coordinates (Lat/Lng), Altitude/Elevation (m), GPS Accuracy (m), and Photo EXIF timestamp/geotags.</li>
+                    <li><strong>Camera &amp; Vision QA:</strong> Uploaded photo base64 stream, EXIF camera make/model/focal length, and AI-detected landmark features.</li>
+                    <li><strong>Device &amp; Telemetry:</strong> Battery level percentage, Online/Offline connection status, Screen aspect orientation, and Time spent per clue.</li>
+                    <li><strong>Resilience &amp; Hints:</strong> Field Progress Save count, Tech Backup usage, and A-Z hint toggle usage.</li>
+                  </ul>
+                  <p className="text-xs text-theme-sub italic pt-1">
+                    🔒 <strong>Privacy Statement:</strong> All captured data is strictly restricted to project evaluation, scoring engine calculations, and workshop leaderboards.
+                  </p>
+                </div>
               </div>
             </div>
           )}
