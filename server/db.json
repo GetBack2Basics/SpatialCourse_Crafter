@@ -44,6 +44,14 @@
       "organization": "",
       "notes": "",
       "updatedAt": "2026-08-10T17:56:30.756Z"
+    },
+    {
+      "email": "user@device-account.com",
+      "name": "user",
+      "picture": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
+      "authProvider": "GOOGLE",
+      "role": "PLAYER",
+      "createdAt": "2026-08-13T04:29:25.112Z"
     }
   ],
   "submissions": []

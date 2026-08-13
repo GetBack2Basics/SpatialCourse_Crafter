@@ -1,20 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { authService } from '../../services/authService';
 import { UserCheck, LogOut, ShieldAlert, Plus, CheckCircle2, X, Edit3, User, Mail, Users, Building, FileText, MapPin } from 'lucide-react';
 
-export default function AuthModal({ isOpen, onClose, currentUser }) {
+export default function AuthModal({ isOpen, onClose, currentUser, courses = [] }) {
   const [emailInput, setEmailInput] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [activeTab, setActiveTab] = useState('PROFILE'); // 'PROFILE' | 'USER_PROFILES' | 'SUPER_ADMIN' | 'TEAMS'
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [, setForceUpdate] = useState(0);
 
-  // Available sample courses list for assignment
-  const AVAILABLE_COURSES = [
-    { id: 'course-fungis-2026', name: 'FunGIS Spatial Olympics 2026 (Lake Macquarie)' },
-    { id: 'course-rathmines-legacy', name: 'Rathmines Catalina Flying Boat Challenge' },
-    { id: 'course-sydney-spatial', name: 'Sydney Harbour Spatial Survey' }
-  ];
+  useEffect(() => {
+    const unsubscribe = authService.subscribe(() => {
+      setForceUpdate(n => n + 1);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Auth Mode State (Email vs Code vs Google)
+  const [authStep, setAuthStep] = useState('EMAIL'); // 'EMAIL' | 'VERIFY_CODE'
+  const [codeInput, setCodeInput] = useState('');
+  const [sentCode, setSentCode] = useState(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [emailIsSent, setEmailIsSent] = useState(false);
+
+  // Admin New User Creation State
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState('PLAYER');
+  const [newUserOrg, setNewUserOrg] = useState('');
 
   // Super Admin Role Assign State
   const [grantEmail, setGrantEmail] = useState('');
@@ -23,7 +39,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
   // Team Create & Edit State
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamMemberEmails, setNewTeamMemberEmails] = useState([]);
-  const [newTeamCourseIds, setNewTeamCourseIds] = useState(['course-fungis-2026']);
+  const [newTeamCourseIds, setNewTeamCourseIds] = useState(['cairns-hilton-surveying']);
 
   const [editingTeam, setEditingTeam] = useState(null);
   const [editTeamName, setEditTeamName] = useState('');
@@ -40,34 +56,16 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
   const [editOrg, setEditOrg] = useState('');
   const [editNotes, setEditNotes] = useState('');
 
-  // Auth Mode State (Email vs Code vs Google)
-  const [authStep, setAuthStep] = useState('EMAIL'); // 'EMAIL' | 'VERIFY_CODE'
-  const [codeInput, setCodeInput] = useState('');
-  const [sentCode, setSentCode] = useState(null);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const [emailIsSent, setEmailIsSent] = useState(false);
-
   if (!isOpen) return null;
 
   const isSuperAdmin = authService.isSuperAdmin();
   const isAdmin = authService.isAdmin();
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setErrorMsg(null);
     try {
-      // Direct Google Auth trigger / One Tap fallback
-      const mockGoogleAccount = {
-        email: emailInput && emailInput.includes('@') ? emailInput : 'participant.google@fungis.org',
-        name: nameInput || 'Google Authenticated User',
-        picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-      };
-      authService.signInWithGoogle(mockGoogleAccount);
-      setSuccessMsg(`Signed in with Google as ${mockGoogleAccount.email}!`);
-      setTimeout(() => {
-        setSuccessMsg(null);
-        if (onClose) onClose();
-      }, 1200);
+      await authService.signInWithGoogleRedirect();
+      setSuccessMsg("Redirecting to Google Sign-In...");
     } catch (err) {
       setErrorMsg(err.message);
     }
@@ -78,18 +76,25 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!emailInput || !emailInput.includes('@')) {
-      setErrorMsg("Please enter a valid email address.");
+    const cleanEmail = (emailInput || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorMsg("Please enter a valid email address (e.g. participant@domain.com).");
       return;
     }
 
     setIsSendingCode(true);
     try {
-      const result = await authService.sendVerificationCode(emailInput);
-      setSentCode(result.code);
-      setEmailIsSent(Boolean(result.emailSent));
-      setAuthStep('VERIFY_CODE');
-      setSuccessMsg(result.message || `Verification code sent to ${emailInput}! Check your inbox or enter code below.`);
+      const result = await authService.sendVerificationCode(cleanEmail, nameInput);
+      if (result.step === 'SIGNED_IN') {
+        setSuccessMsg(result.message || `Signed in successfully as ${cleanEmail}!`);
+        setTimeout(() => {
+          setSuccessMsg(null);
+          if (onClose) onClose();
+        }, 1200);
+      } else {
+        setAuthStep('VERIFY_CODE');
+        setSuccessMsg(result.message || `Verification code sent to ${cleanEmail}! Check your inbox or enter code below.`);
+      }
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -121,6 +126,24 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
       setErrorMsg(err.message);
     } finally {
       setIsVerifyingCode(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    const cleanEmail = (emailInput || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorMsg("Please enter your email address to receive a password reset link.");
+      return;
+    }
+
+    try {
+      const res = await authService.sendPasswordReset(cleanEmail);
+      setSuccessMsg(res.message);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      setErrorMsg(err.message);
     }
   };
 
@@ -166,6 +189,42 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
       setSuccessMsg(`Granted ${grantRole} role to ${grantEmail}!`);
       setGrantEmail('');
       setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  const handleCreateUser = (e) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    try {
+      const created = authService.createUser({
+        name: newUserName,
+        email: newUserEmail,
+        role: newUserRole,
+        organization: newUserOrg
+      });
+      setSuccessMsg(`Successfully created user account for ${created.name} (${created.email})!`);
+      setNewUserName('');
+      setNewUserEmail('');
+      setNewUserOrg('');
+      setIsCreatingUser(false);
+      setTimeout(() => setSuccessMsg(null), 3500);
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  const handleDeleteUser = (user) => {
+    setErrorMsg(null);
+    if (!window.confirm(`Are you sure you want to delete account "${user.email}"?`)) return;
+    try {
+      authService.deleteUser(user.email);
+      setSuccessMsg(`Successfully deleted user account ${user.email}.`);
+      if (editingUser && editingUser.email.toLowerCase() === user.email.toLowerCase()) {
+        setEditingUser(null);
+      }
+      setTimeout(() => setSuccessMsg(null), 3500);
     } catch (err) {
       setErrorMsg(err.message);
     }
@@ -376,6 +435,63 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                     <span>Sign Out</span>
                   </button>
                 </div>
+
+                {/* Team Join Request Section */}
+                <div className="pt-3 border-t border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-emerald-400 uppercase font-mono flex items-center gap-1.5">
+                      <Users className="w-4 h-4" />
+                      Request to Join a Competition Team
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">Admin Approval Required</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {authService.teams.map(team => {
+                      const isMember = (team.members || []).some(m => m.toLowerCase() === currentUser.email.toLowerCase());
+                      const isPending = (team.pendingRequests || []).some(r => r.email.toLowerCase() === currentUser.email.toLowerCase());
+
+                      return (
+                        <div key={team.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                          <div>
+                            <div className="font-bold text-slate-100 text-xs">{team.name}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {team.members?.length || 0} Member(s)
+                            </div>
+                          </div>
+
+                          {isMember ? (
+                            <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold flex items-center gap-1 font-mono">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Active Member</span>
+                            </span>
+                          ) : isPending ? (
+                            <span className="px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold flex items-center gap-1 font-mono animate-pulse">
+                              <span>⏳ Request Pending Approval</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setErrorMsg(null);
+                                try {
+                                  authService.requestToJoinTeam(team.id, currentUser.email, currentUser.name);
+                                  setSuccessMsg(`Submitted join request to "${team.name}"! Waiting for Admin approval.`);
+                                  setTimeout(() => setSuccessMsg(null), 4000);
+                                } catch (err) {
+                                  setErrorMsg(err.message);
+                                }
+                              }}
+                              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs uppercase cursor-pointer transition-all shadow"
+                            >
+                              Request Join
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-4 font-mono">
@@ -489,28 +605,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
               </div>
             )}
 
-            {/* Quick Switch Profiles for Workshop Demo */}
-            <div className="pt-3 border-t border-slate-800 space-y-2 font-mono">
-              <div className="text-[11px] font-bold text-slate-400 uppercase">Quick Switch Accounts (Workshop Demo)</div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleQuickSignIn('coreagc@gmail.com', 'George Corea (Super Admin)')}
-                  className="p-2 rounded-xl bg-purple-950/60 border border-purple-500/40 text-left hover:bg-purple-900/80 transition-colors cursor-pointer"
-                >
-                  <div className="text-xs font-bold text-purple-300">George Corea</div>
-                  <div className="text-[10px] text-purple-400">coreagc@gmail.com (Super Admin)</div>
-                </button>
 
-                <button
-                  onClick={() => handleQuickSignIn('william.dean@fungis.org', 'William Dean (Admin)')}
-                  className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-left hover:bg-emerald-900/80 transition-colors cursor-pointer"
-                >
-                  <div className="text-xs font-bold text-emerald-300">William Dean</div>
-                  <div className="text-[10px] text-emerald-400">william.dean@fungis.org (Admin)</div>
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
@@ -630,7 +725,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                     <span>Assign User Directly to Courses (Multi-Course Assignment)</span>
                   </label>
                   <div className="space-y-1.5 max-h-32 overflow-y-auto p-1">
-                    {AVAILABLE_COURSES.map(c => {
+                    {availableCoursesList.map(c => {
                       const isChecked = editAssignedCourseIds.includes(c.id);
                       return (
                         <label key={c.id} className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-colors ${
@@ -642,7 +737,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                             onChange={() => setEditAssignedCourseIds(toggleItemInArray(editAssignedCourseIds, c.id))}
                             className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-400"
                           />
-                          <span className="font-bold text-[11px] truncate">{c.name}</span>
+                          <span className="font-bold text-[11px] truncate">{c.title || c.name || c.id}</span>
                         </label>
                       );
                     })}
@@ -663,20 +758,33 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                   />
                 </div>
 
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingUser(null)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-bold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold uppercase tracking-wider cursor-pointer shadow-md"
-                  >
-                    Save User Profile & Assignments
-                  </button>
+                <div className="pt-2 flex justify-between items-center">
+                  {editingUser && editingUser.email.toLowerCase() !== 'coreagc@gmail.com' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUser(editingUser)}
+                      className="px-3 py-1.5 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Delete User Account</span>
+                    </button>
+                  ) : <div />}
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingUser(null)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold uppercase tracking-wider cursor-pointer shadow-md"
+                    >
+                      Save User Profile & Assignments
+                    </button>
+                  </div>
                 </div>
               </form>
             ) : (
@@ -684,8 +792,64 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
               <div className="space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-slate-200 uppercase">User Accounts & Profiles Directory</h4>
-                  <span className="text-[10px] text-slate-400">{authService.users.length} Users Registered</span>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingUser(!isCreatingUser)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase flex items-center gap-1 cursor-pointer shadow"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isCreatingUser ? 'Cancel' : 'Add New User'}</span>
+                  </button>
                 </div>
+
+                {/* Add New User Form */}
+                {isCreatingUser && (
+                  <form onSubmit={handleCreateUser} className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/50 space-y-3">
+                    <div className="text-xs font-bold text-emerald-300 uppercase">Create New User Account</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        required
+                        placeholder="User Full Name"
+                        value={newUserName}
+                        onChange={e => setNewUserName(e.target.value)}
+                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400 focus:outline-none"
+                      />
+                      <input
+                        type="email"
+                        required
+                        placeholder="user.email@domain.org"
+                        value={newUserEmail}
+                        onChange={e => setNewUserEmail(e.target.value)}
+                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400 focus:outline-none"
+                      />
+                      <select
+                        value={newUserRole}
+                        onChange={e => setNewUserRole(e.target.value)}
+                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400 focus:outline-none"
+                      >
+                        <option value="PLAYER">PLAYER (Participant runner)</option>
+                        <option value="ADMIN">ADMIN (Event Coordinator)</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Organization (e.g. FunGIS)"
+                        value={newUserOrg}
+                        onChange={e => setNewUserOrg(e.target.value)}
+                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-emerald-400 focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs uppercase cursor-pointer"
+                      >
+                        Save & Create User
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 <div className="space-y-2 max-h-72 overflow-y-auto">
                   {authService.users.map(u => {
@@ -720,6 +884,17 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                             <Edit3 className="w-3.5 h-3.5" />
                             <span>Edit Profile</span>
                           </button>
+
+                          {u.email.toLowerCase() !== 'coreagc@gmail.com' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u)}
+                              className="p-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 text-[10px] font-bold cursor-pointer transition-colors"
+                              title="Delete user account"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -835,7 +1010,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                     Assign Team to Challenges / Courses
                   </label>
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1.5">
-                    {AVAILABLE_COURSES.map(c => {
+                    {availableCoursesList.map(c => {
                       const isChecked = editTeamCourseIds.includes(c.id);
                       return (
                         <label key={c.id} className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
@@ -848,7 +1023,7 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                               onChange={() => setEditTeamCourseIds(toggleItemInArray(editTeamCourseIds, c.id))}
                               className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-400"
                             />
-                            <span className="font-bold text-xs">{c.name}</span>
+                            <span className="font-bold text-xs">{c.title || c.name || c.id}</span>
                           </div>
                         </label>
                       );
@@ -954,6 +1129,68 @@ export default function AuthModal({ isOpen, onClose, currentUser }) {
                     <div className="text-[10px] text-slate-300">Members: {t.members.join(', ') || 'No members assigned'}</div>
                     {t.assignedCourseIds && t.assignedCourseIds.length > 0 && (
                       <div className="text-[10px] text-cyan-400">Assigned Courses: {t.assignedCourseIds.join(', ')}</div>
+                    )}
+
+                    {/* Admin Approval Checklist for Pending Join Requests */}
+                    {t.pendingRequests && t.pendingRequests.length > 0 && (
+                      <div className="mt-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/40 space-y-2">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-amber-300">
+                          <span>⏳ Pending Join Requests ({t.pendingRequests.length})</span>
+                          <span className="text-[9px] text-amber-400/80">Click Tick (✓) to Approve</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {t.pendingRequests.map(req => (
+                            <div key={req.email} className="p-2 rounded bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
+                              <div>
+                                <div className="text-xs font-bold text-white">{req.name || req.email}</div>
+                                <div className="text-[10px] text-cyan-400">{req.email}</div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {/* Tick Approve Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setErrorMsg(null);
+                                    try {
+                                      authService.approveJoinRequest(t.id, req.email);
+                                      setSuccessMsg(`Approved ${req.email} for team "${t.name}"!`);
+                                      setTimeout(() => setSuccessMsg(null), 3000);
+                                    } catch (err) {
+                                      setErrorMsg(err.message);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-md"
+                                  title="Tick to Approve User into Team"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </button>
+
+                                {/* Reject Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setErrorMsg(null);
+                                    try {
+                                      authService.rejectJoinRequest(t.id, req.email);
+                                      setSuccessMsg(`Declined join request for ${req.email}.`);
+                                      setTimeout(() => setSuccessMsg(null), 3000);
+                                    } catch (err) {
+                                      setErrorMsg(err.message);
+                                    }
+                                  }}
+                                  className="p-1 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer"
+                                  title="Reject Request"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}

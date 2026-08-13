@@ -19,6 +19,11 @@ import { authService } from './services/authService';
 
 
 export default function App() {
+  // Authenticated User State & Modal State
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => !authService.getCurrentUser());
+  const [realTeams, setRealTeams] = useState(() => authService.teams);
+
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = (params.get('tab') || params.get('mode') || '').toUpperCase();
@@ -38,6 +43,10 @@ export default function App() {
   });
 
   const handleTabSelect = (newTab) => {
+    // If selecting ADMIN or SCORING and user is not logged in / not admin, show AuthModal
+    if ((newTab === 'ADMIN' || newTab === 'SCORING') && (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SUPER_ADMIN'))) {
+      setIsAuthModalOpen(true);
+    }
     setActiveTab(newTab);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -114,13 +123,10 @@ export default function App() {
     }
   };
 
-  // Authenticated User State & Modal State
-  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => !authService.getCurrentUser());
-  const [realTeams, setRealTeams] = useState(() => authService.teams);
-
-  // Active team derived from auth state
-  const activeTeam = { id: 'team-george-will', name: 'Far North GIS (George & Will)', members: ['coreagc@gmail.com', 'william.dean@fungis.org'] };
+  // Active team derived dynamically from authenticated user session & cloud state
+  const activeTeam = authService.currentUser
+    ? authService.teams.find(t => (t.members || []).some(m => m.toLowerCase() === authService.currentUser.email.toLowerCase())) || authService.teams[0] || null
+    : (authService.teams[0] || null);
 
   const handleDeleteCourse = (courseIdToDelete) => {
     setCourses(prev => {
@@ -217,7 +223,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-surface text-theme-main transition-colors duration-300 font-body-md relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-theme-surface text-theme-main transition-colors duration-300 font-body-md relative overflow-x-hidden">
       {/* Header Bar */}
       <Header
         activeTab={activeTab}
@@ -231,7 +237,7 @@ export default function App() {
       />
 
       {/* Main Tab Content */}
-      <main className="w-full pt-16 pb-20 lg:pb-0 min-h-[calc(100vh-4rem)]">
+      <main className="w-full pt-16 flex-1 flex flex-col">
         {activeTab === 'ADMIN' && (
           currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' ? (
             <CoursePlanner
@@ -263,7 +269,12 @@ export default function App() {
         {activeTab === 'PLAYER' && (
           <ClueRunner
             course={activeCourse}
+            courses={courses}
+            selectedCourseId={selectedCourseId}
+            onSelectCourse={setSelectedCourseId}
             activeTeam={activeTeam}
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
             submissions={[...submissions, ...localSubmissions]}
             onSubmitData={(submissionPayload) => {
               offlineStorage.saveSubmission(submissionPayload).then(() => {
@@ -276,41 +287,25 @@ export default function App() {
         )}
 
         {activeTab === 'SCORING' && (
-          (currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || [...submissions, ...localSubmissions].some(s => s.isSubmissionLocked)) ? (
-            <Leaderboard
-              teams={realTeams}
-              submissions={[...submissions, ...localSubmissions]}
-              courseClues={activeCourse.clues}
-              onSubmissionsValidated={(validated) => {
-                setSubmissions(prev => {
-                  const updatedIds = new Set(validated.map(v => v.id));
-                  const unchanged = prev.filter(s => !updatedIds.has(s.id));
-                  return [...unchanged, ...validated];
-                });
-                setShowLogs(true);
-                wsService.emitLog('SUCCESS', `AI Validation complete: ${validated.length} submission(s) scored.`);
-              }}
-              courses={courses}
-              selectedCourseId={selectedCourseId}
-              onSelectCourse={setSelectedCourseId}
-              activeCourse={activeCourse}
-              onValidationStart={() => setShowLogs(true)}
-            />
-          ) : (
-            <div className="max-w-2xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-border-subtle shadow-2xl text-center space-y-4">
-              <span className="material-symbols-outlined text-5xl text-sky-400">lock</span>
-              <h2 className="text-2xl font-bold text-on-surface">Leaderboard Access Locked</h2>
-              <p className="text-sm text-text-secondary">
-                Leaderboard standings unlock once your team has completed all course waypoints and locked your final submission.
-              </p>
-              <button
-                onClick={() => setActiveTab('PLAYER')}
-                className="mt-4 bg-sky-500 text-slate-950 font-bold py-2.5 px-6 rounded-xl hover:bg-sky-400 transition-colors"
-              >
-                Return to Runner & Complete Challenge
-              </button>
-            </div>
-          )
+          <Leaderboard
+            teams={realTeams}
+            submissions={[...submissions, ...localSubmissions]}
+            courseClues={activeCourse.clues}
+            onSubmissionsValidated={(validated) => {
+              setSubmissions(prev => {
+                const updatedIds = new Set(validated.map(v => v.id));
+                const unchanged = prev.filter(s => !updatedIds.has(s.id));
+                return [...unchanged, ...validated];
+              });
+              setShowLogs(true);
+              wsService.emitLog('SUCCESS', `AI Validation complete: ${validated.length} submission(s) scored.`);
+            }}
+            courses={courses}
+            selectedCourseId={selectedCourseId}
+            onSelectCourse={setSelectedCourseId}
+            activeCourse={activeCourse}
+            onValidationStart={() => setShowLogs(true)}
+          />
         )}
 
         {activeTab === 'ISSUES' && (
@@ -353,6 +348,7 @@ export default function App() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         currentUser={currentUser}
+        courses={courses}
       />
 
       {/* App Help & System Guide Modal */}

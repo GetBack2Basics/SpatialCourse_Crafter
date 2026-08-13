@@ -1,8 +1,8 @@
 import React from 'react';
 
 export default function Footer() {
-  // Timestamp in yyyymmddhhmm format
-  const buildTimestamp = '202608090828';
+  // Timestamp in yyyymmddhhmm format dynamically injected at build time
+  const buildTimestamp = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : '202608130952';
 
   return (
     <footer className="w-full bg-theme-surface/90 backdrop-blur-md border-t border-theme text-theme-sub py-3 px-4 sm:px-8 text-xs flex flex-col sm:flex-row items-center justify-between gap-2 z-30 transition-colors duration-300">

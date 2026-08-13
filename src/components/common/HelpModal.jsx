@@ -29,11 +29,10 @@ export default function HelpModal({ isOpen, onClose }) {
         <div className="flex items-center border-b border-theme bg-theme-surface px-4 overflow-x-auto text-xs font-semibold uppercase tracking-wider">
           <button
             onClick={() => setActiveHelpTab('RUNNER')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'RUNNER'
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${activeHelpTab === 'RUNNER'
                 ? 'border-theme-primary text-theme-primary font-bold'
                 : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-base">directions_run</span>
             Runner
@@ -41,11 +40,10 @@ export default function HelpModal({ isOpen, onClose }) {
 
           <button
             onClick={() => setActiveHelpTab('LEADERBOARD')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'LEADERBOARD'
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${activeHelpTab === 'LEADERBOARD'
                 ? 'border-theme-primary text-theme-primary font-bold'
                 : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-base">leaderboard</span>
             Leaderboard
@@ -53,11 +51,10 @@ export default function HelpModal({ isOpen, onClose }) {
 
           <button
             onClick={() => setActiveHelpTab('PLANNER')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'PLANNER'
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${activeHelpTab === 'PLANNER'
                 ? 'border-theme-primary text-theme-primary font-bold'
                 : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-base">map</span>
             Course Manager
@@ -65,11 +62,10 @@ export default function HelpModal({ isOpen, onClose }) {
 
           <button
             onClick={() => setActiveHelpTab('ISSUES')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'ISSUES'
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${activeHelpTab === 'ISSUES'
                 ? 'border-theme-primary text-theme-primary font-bold'
                 : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-base">bug_report</span>
             Bugs
@@ -77,11 +73,10 @@ export default function HelpModal({ isOpen, onClose }) {
 
           <button
             onClick={() => setActiveHelpTab('TECH_STACK')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'TECH_STACK'
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${activeHelpTab === 'TECH_STACK'
                 ? 'border-theme-primary text-theme-primary font-bold'
                 : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-base">terminal</span>
             Tech Stack
@@ -89,11 +84,10 @@ export default function HelpModal({ isOpen, onClose }) {
 
           <button
             onClick={() => setActiveHelpTab('SPATIAL_STACK')}
-            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeHelpTab === 'SPATIAL_STACK'
+            className={`py-3 px-4 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${activeHelpTab === 'SPATIAL_STACK'
                 ? 'border-theme-primary text-theme-primary font-bold'
                 : 'border-transparent text-theme-sub hover:text-theme-main'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-base">layers</span>
             Spatial Stack
@@ -210,7 +204,7 @@ export default function HelpModal({ isOpen, onClose }) {
                     Save Progress Snapshots & Backup (Bonus Points)
                   </h4>
                   <p className="text-xs text-theme-sub">
-                    Tap <strong>Save Progress JSON</strong> on the map canvas as you advance. Saving progress backups awards technical failure preparedness bonus points (+25 PTS base + 10 PTS/save). If your phone battery dies or connection drops, restore your progress anytime with <strong>Upload Backup JSON</strong> or switch to <strong>Print Paper Guide</strong>.
+                    Tap <strong>Save Progress JSON</strong> on the map canvas as you advance. If your phone battery dies or connection drops, restore your progress anytime with <strong>Upload Backup JSON</strong> or switch to <strong>Print Paper Guide</strong>.
                   </p>
                 </div>
 

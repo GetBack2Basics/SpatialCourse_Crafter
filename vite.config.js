@@ -18,7 +18,14 @@ function findFreePort(start = 3000) {
 
 const port = await findFreePort(3000);
 
+const now = new Date();
+const pad = (n) => String(n).padStart(2, '0');
+const dynamicBuildTimestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}`;
+
 export default defineConfig({
+  define: {
+    __BUILD_TIMESTAMP__: JSON.stringify(dynamicBuildTimestamp)
+  },
   plugins: [react()],
   server: {
     port,

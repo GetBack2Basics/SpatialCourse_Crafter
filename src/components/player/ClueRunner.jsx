@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MapLibreView from '../map/MapLibreView';
 import SubmissionModal from './SubmissionModal';
+import { authService } from '../../services/authService';
 import {
   calculateHaversineDistance,
   calculateAzimuth,
@@ -38,15 +39,15 @@ function DraggableBlock({
     };
   };
 
-  const handleMouseDown = (e) => {
+  const handleDragIconMouseDown = (e) => {
     if (!draggable) return;
-    if (e.target.closest('.no-drag')) return;
+    e.stopPropagation();
     startDrag(e.clientX, e.clientY);
   };
 
-  const handleTouchStart = (e) => {
+  const handleDragIconTouchStart = (e) => {
     if (!draggable) return;
-    if (e.target.closest('.no-drag')) return;
+    e.stopPropagation();
     const touch = e.touches[0];
     startDrag(touch.clientX, touch.clientY);
   };
@@ -109,15 +110,18 @@ function DraggableBlock({
     >
       {/* High Contrast Header Handle */}
       <div
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        className={`flex items-center justify-between px-3.5 py-2.5 border-b border-theme cursor-grab active:cursor-grabbing select-none bg-theme-container-high/80 hover:bg-theme-container-high rounded-t-xl transition-colors ${
+        className={`flex items-center justify-between px-3.5 py-2.5 border-b border-theme select-none bg-theme-container-high/80 rounded-t-xl transition-colors ${
           isCollapsed ? 'border-b-0 rounded-b-xl' : ''
         }`}
       >
         <div className="flex items-center gap-2">
           {draggable && (
-            <span className="material-symbols-outlined text-theme-sub text-base hover:text-theme-main">
+            <span
+              onMouseDown={handleDragIconMouseDown}
+              onTouchStart={handleDragIconTouchStart}
+              className="material-symbols-outlined text-theme-sub text-base hover:text-theme-primary cursor-grab active:cursor-grabbing p-1 rounded hover:bg-theme-container-high touch-none"
+              title="Click and drag to move panel"
+            >
               drag_indicator
             </span>
           )}
@@ -165,13 +169,21 @@ function DraggableBlock({
   );
 }
 
-export default function ClueRunner({ course, activeTeam, submissions = [], onSubmitData, pendingSyncCount = 0, onSyncToCloud }) {
+export default function ClueRunner({ course, courses = [], selectedCourseId, onSelectCourse, activeTeam, currentUser, onOpenAuthModal, submissions = [], onSubmitData, pendingSyncCount = 0, onSyncToCloud }) {
   const [activeClueId, setActiveClueId] = useState(course.clues[0]?.id);
+
+  // Sync active clue when course changes
+  useEffect(() => {
+    if (course.clues && course.clues.length > 0) {
+      setActiveClueId(course.clues[0].id);
+    }
+  }, [course.id]);
   const [userLocation, setUserLocation] = useState(course.startLocation);
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
   const [gpsError, setGpsError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInitialMode, setModalInitialMode] = useState('GALLERY');
+  const [isRefreshingAuth, setIsRefreshingAuth] = useState(false);
 
   const [inspectedPoint, setInspectedPoint] = useState(null);
   const [mapCenterOverride, setMapCenterOverride] = useState(null);
@@ -417,7 +429,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
         </head>
         <body>
           <h1>${course.title} - Field Paper Backup Guide</h1>
-          <p><strong>Team:</strong> ${activeTeam?.name || 'Far North GIS'} | <strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+          <p><strong>Team:</strong> ${activeTeam?.name || 'Field Agent Team'} | <strong>Generated:</strong> ${new Date().toLocaleString()}</p>
           <hr/>
           ${paperRows}
           <script>window.print();</script>
@@ -427,8 +439,90 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
     win.document.close();
   };
 
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+
   return (
-    <div className="flex flex-col w-full h-full gap-4 px-margin-mobile pb-12 text-white">
+    <div className="flex flex-col w-full min-h-[calc(100vh-4rem)] flex-1 gap-4 px-margin-mobile pb-8 text-white relative">
+
+      {/* Course Selection Dropdown Header - Clean (No text above) */}
+      {courses.length > 0 && onSelectCourse && (
+        <div className="w-full">
+          <select
+            value={selectedCourseId || course.id}
+            onChange={(e) => onSelectCourse(e.target.value)}
+            className="w-full bg-slate-950/90 backdrop-blur-md border-2 border-cyan-500/60 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-cyan-300 font-mono font-bold focus:outline-none focus:border-cyan-400 shadow-xl cursor-pointer"
+          >
+            {courses.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.title} ({c.clues?.length || 0} waypoints)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Access Restricted Banner if User is Not Assigned to Selected Course */}
+      {(() => {
+        const activeUser = currentUser || authService.getCurrentUser();
+        const userEmail = activeUser?.email?.toLowerCase();
+        const isSuper = authService.isSuperAdmin();
+        const isAdminUser = authService.isAdmin();
+        
+        // Find if user or user's teams are assigned to this course
+        const userTeams = authService.teams.filter(t => (t.members || []).some(m => m.toLowerCase() === userEmail));
+        const isAssigned = isSuper || isAdminUser || (activeUser?.assignedCourseIds || []).includes(course.id) || userTeams.some(t => (t.assignedCourseIds || []).includes(course.id));
+
+        if (!isAssigned) {
+          const hasRequested = userTeams.some(t => (t.pendingRequests || []).some(r => r.email.toLowerCase() === userEmail));
+
+          return (
+            <div className="p-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500/60 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base">lock</span>
+                  <span>Project Access Restricted: "{course.title}"</span>
+                </span>
+                <p className="text-[11px] text-amber-200">
+                  You are viewing this challenge in read-only mode. Submit a request to join an assigned team or request course access.
+                </p>
+              </div>
+
+              {hasRequested ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3 py-1.5 rounded-xl bg-amber-900/90 text-amber-200 border border-amber-600 text-xs font-bold flex items-center gap-1.5 shadow">
+                    <span>⏳ Access Request Pending</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsRefreshingAuth(true);
+                      await authService.syncCloudState();
+                      setTimeout(() => setIsRefreshingAuth(false), 500);
+                    }}
+                    title="Check for Admin Approval"
+                    className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition-all active:scale-95 shadow cursor-pointer flex items-center justify-center"
+                  >
+                    <span className={`material-symbols-outlined text-sm ${isRefreshingAuth ? 'animate-spin' : ''}`}>
+                      refresh
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenAuthModal) onOpenAuthModal();
+                  }}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-wider shrink-0 cursor-pointer shadow-lg transition-transform active:scale-95"
+                >
+                  Request Access / Join Team
+                </button>
+              )}
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {/* 1. Active Target Card */}
       <DraggableBlock
@@ -452,39 +546,26 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-full sm:w-28 h-28 rounded-lg bg-slate-900 overflow-hidden border border-slate-700 shrink-0 relative shadow">
-              <img
-                alt="Reference Image"
-                className="w-full h-full object-cover"
-                src={activeClue.referencePhotoUrl || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600'}
-              />
-              <span className="absolute bottom-1 right-1 bg-slate-950/90 text-[9px] text-cyan-300 px-1.5 py-0.5 rounded font-mono font-bold">
-                Target Ref
-              </span>
-            </div>
+          <div className="flex flex-col space-y-3">
+            <p className="font-body-sm text-body-sm text-slate-200 font-medium italic drop-shadow">
+              "{activeClue.description || 'Proceed to target coordinates and inspect features.'}"
+            </p>
 
-            <div className="flex flex-col justify-between py-1 flex-1 space-y-3">
-              <p className="font-body-sm text-body-sm text-slate-200 font-medium italic drop-shadow">
-                "{activeClue.description || 'Proceed to target coordinates and inspect features.'}"
-              </p>
-
-              <button
-                onClick={() => {
-                  setModalInitialMode(isWithinRadius ? 'CAMERA' : 'GALLERY');
-                  setIsModalOpen(true);
-                }}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.98] cursor-pointer shadow-lg font-extrabold no-drag"
-              >
-                <span className="material-symbols-outlined text-lg">photo_camera</span>
-                UPLOAD PHOTO
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setModalInitialMode(isWithinRadius ? 'CAMERA' : 'GALLERY');
+                setIsModalOpen(true);
+              }}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.98] cursor-pointer shadow-lg font-extrabold no-drag"
+            >
+              <span className="material-symbols-outlined text-lg">photo_camera</span>
+              Capture/Edit Entry
+            </button>
           </div>
         </div>
       </DraggableBlock>
 
-      {/* 2. Course Clues List Accordion */}
+      {/* 2. Course Clues List Accordion - Clean (No redundant description in dropdown) */}
       <DraggableBlock
         id="course-clues"
         title={`Course Clues (${course.clues.length})`}
@@ -504,7 +585,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               <div
                 key={c.id}
                 onClick={() => handleClueSelect(c.id)}
-                className={`p-3.5 flex flex-col gap-3 cursor-pointer transition-colors no-drag ${
+                className={`p-3 flex items-center justify-between cursor-pointer transition-colors no-drag ${
                   isCurrent
                     ? 'bg-slate-900 border-l-4 border-l-cyan-400 rounded-r-xl shadow-lg'
                     : isCompleted
@@ -512,34 +593,48 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
                     : 'hover:bg-slate-900/50'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 font-mono text-xs font-bold ${
-                      isCompleted 
-                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-extrabold' 
-                        : isCurrent
-                        ? 'bg-cyan-950 border-cyan-400 text-cyan-300 font-extrabold'
-                        : 'bg-slate-900 border-slate-700 text-slate-300'
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 font-mono text-xs font-bold ${
+                    isCompleted 
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-extrabold' 
+                      : isCurrent
+                      ? 'bg-cyan-950 border-cyan-400 text-cyan-300 font-extrabold'
+                      : 'bg-slate-900 border-slate-700 text-slate-300'
+                  }`}>
+                    {getWaypointLabel(idx).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className={`font-body-sm text-body-sm font-bold text-white drop-shadow ${
+                      !isCurrent && !isCompleted ? 'opacity-90' : ''
                     }`}>
-                      {getWaypointLabel(idx).toUpperCase()}
-                    </div>
-                    <div>
-                      <h4 className={`font-body-sm text-body-sm font-bold text-white drop-shadow mb-0.5 ${
-                        !isCurrent && !isCompleted ? 'opacity-90' : ''
-                      }`}>
-                        {c.title}
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-slate-900 text-slate-300 rounded border border-slate-700">
-                          {c.category || 'Geospatial'}
-                        </span>
-                        <span className="text-xs font-mono text-cyan-300 font-extrabold drop-shadow">
-                          {formatDist(clueDist)}
-                        </span>
-                      </div>
+                      {c.title}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 bg-slate-900 text-slate-300 rounded border border-slate-700">
+                        {c.category || 'Geospatial'}
+                      </span>
+                      <span className="text-xs font-mono text-cyan-300 font-extrabold drop-shadow">
+                        {formatDist(clueDist)}
+                      </span>
                     </div>
                   </div>
+                </div>
 
+                <div className="flex items-center gap-2">
+                  {isCurrent && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setModalInitialMode(isWithinRadius ? 'CAMERA' : 'GALLERY');
+                        setIsModalOpen(true);
+                      }}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-1.5 rounded-lg flex items-center justify-center transition-transform active:scale-95 shadow cursor-pointer"
+                      title="Capture/Edit Entry"
+                    >
+                      <span className="material-symbols-outlined text-base">photo_camera</span>
+                    </button>
+                  )}
                   {isCompleted ? (
                     <span className="material-symbols-outlined text-emerald-400 text-xl font-bold">check_circle</span>
                   ) : isCurrent ? (
@@ -548,50 +643,6 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
                     <span className="material-symbols-outlined text-slate-400 text-xl">arrow_forward</span>
                   )}
                 </div>
-
-                {/* Expanded Waypoint Details & Capture Photo Icon inside Chosen Menu Item */}
-                {isCurrent && (
-                  <div className="pt-2 border-t border-slate-800 space-y-3 animate-in fade-in duration-200">
-                    <p className="text-xs text-slate-300 italic">
-                      "{c.description || 'Proceed to target coordinates and inspect features.'}"
-                    </p>
-
-                    {c.referencePhotoUrl && (
-                      <div className="w-full h-28 rounded-lg overflow-hidden border border-slate-700 relative shadow-inner">
-                        <img src={c.referencePhotoUrl} alt={c.title} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-1 right-1 bg-slate-950/90 text-[9px] text-cyan-300 px-1.5 py-0.5 rounded font-mono">
-                          Target Reference
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between gap-2 pt-1 font-mono text-xs">
-                      <span className="text-[10px] text-cyan-300 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 font-bold">
-                        Activation: {c.targetRadiusMeters || 100}m
-                      </span>
-
-                      {/* Prominent Photo Upload/Capture Icon Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const activeDist = calculateHaversineDistance(
-                            userLocation.lat, userLocation.lng,
-                            c.targetLocation.lat, c.targetLocation.lng
-                          );
-                          const isWithin = activeDist <= (c.targetRadiusMeters || 100);
-                          setModalInitialMode(isWithin ? 'CAMERA' : 'GALLERY');
-                          setIsModalOpen(true);
-                        }}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-transform active:scale-95 shadow-md cursor-pointer"
-                        title="Upload/Capture photo for this waypoint"
-                      >
-                        <span className="material-symbols-outlined text-base">photo_camera</span>
-                        <span>Upload Photo</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -599,7 +650,7 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
       </DraggableBlock>
 
       {/* 3. Topo Map Canvas & Overlaid HUD Components */}
-      <div className="relative w-full h-[550px] rounded-xl overflow-hidden shadow-2xl border-2 border-slate-700 bg-slate-950 flex-shrink-0">
+      <div className="relative w-full h-[65vh] max-h-[500px] min-h-[360px] rounded-xl overflow-hidden shadow-2xl border-2 border-slate-700 bg-slate-950 flex-shrink-0">
         
         {/* Real Interactive MapLibre View */}
         <div className="absolute inset-0 w-full h-full z-0">
@@ -633,73 +684,73 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
           >
             <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>navigation</span>
           </button>
+          
           <button
-            onClick={() => setMapCenterOverride([userLocation.lng, userLocation.lat])}
-            title="Center on My Location"
+            onClick={() => {
+              // Pan smoothly to current GPS location without altering zoom
+              setMapCenterOverride([userLocation.lng, userLocation.lat]);
+            }}
+            title="Pan to My Current Location"
             className="w-10 h-10 bg-slate-950/80 backdrop-blur-md rounded-full flex items-center justify-center text-cyan-300 shadow-xl border border-cyan-400 hover:bg-slate-900 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-lg">my_location</span>
           </button>
 
-          {/* Discreet Tech Preparedness Backup Controls */}
-          <button
-            onClick={handleExportJSONProgress}
-            title="Save Course Progress Backup (JSON)"
-            className="w-8 h-8 bg-slate-950/70 backdrop-blur-md rounded-full flex items-center justify-center text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-400/50 transition-all cursor-pointer opacity-70 hover:opacity-100 mt-1"
-          >
-            <span className="material-symbols-outlined text-sm">file_download</span>
-          </button>
+          {/* Consolidated Tools Menu (Export/Import/Print) */}
+          <div className="relative">
+            <button
+              onClick={() => setShowToolsMenu(!showToolsMenu)}
+              title="Field & Data Backup Tools"
+              className="w-10 h-10 bg-slate-950/80 backdrop-blur-md rounded-full flex items-center justify-center text-amber-300 shadow-xl border border-amber-400 hover:bg-slate-900 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">build</span>
+            </button>
 
-          <label
-            title="Restore Course Progress Backup (JSON)"
-            className="w-8 h-8 bg-slate-950/70 backdrop-blur-md rounded-full flex items-center justify-center text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-400/50 transition-all cursor-pointer opacity-70 hover:opacity-100"
-          >
-            <span className="material-symbols-outlined text-sm">file_upload</span>
-            <input type="file" accept=".json" onChange={handleImportJSONProgress} className="hidden" />
-          </label>
+            {showToolsMenu && (
+              <div className="absolute top-0 left-12 bg-slate-950/95 backdrop-blur-md border border-slate-700 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 z-30 font-mono text-xs w-44">
+                <button
+                  onClick={() => { handleExportJSONProgress(); setShowToolsMenu(false); }}
+                  className="p-2 rounded-lg hover:bg-slate-900 text-slate-200 hover:text-cyan-300 flex items-center gap-2 text-left"
+                >
+                  <span className="material-symbols-outlined text-base">file_download</span>
+                  <span>Export JSON</span>
+                </button>
+                
+                <label className="p-2 rounded-lg hover:bg-slate-900 text-slate-200 hover:text-cyan-300 flex items-center gap-2 cursor-pointer text-left">
+                  <span className="material-symbols-outlined text-base">file_upload</span>
+                  <span>Import JSON</span>
+                  <input type="file" accept=".json" onChange={(e) => { handleImportJSONProgress(e); setShowToolsMenu(false); }} className="hidden" />
+                </label>
 
-          <button
-            onClick={handleExportPDFPaper}
-            title="Generate Paper Field Backup (Print PDF)"
-            className="w-8 h-8 bg-slate-950/70 backdrop-blur-md rounded-full flex items-center justify-center text-slate-400 hover:text-amber-300 border border-slate-700 hover:border-amber-400/50 transition-all cursor-pointer opacity-70 hover:opacity-100"
-          >
-            <span className="material-symbols-outlined text-sm">print</span>
-          </button>
+                <button
+                  onClick={() => { handleExportPDFPaper(); setShowToolsMenu(false); }}
+                  className="p-2 rounded-lg hover:bg-slate-900 text-slate-200 hover:text-amber-300 flex items-center gap-2 text-left"
+                >
+                  <span className="material-symbols-outlined text-base">print</span>
+                  <span>Print Paper PDF</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Floating Sync & Lock Submissions Button */}
-        <div className="absolute top-4 right-3 z-20 flex flex-col items-end gap-2">
-          {pendingSyncCount > 0 && (
+        {/* Compact Bottom-Left Cloud Sync Button (75% smaller, icon + count only) */}
+        {pendingSyncCount > 0 && (
+          <div className="absolute bottom-3 left-3 z-20">
             <button
               onClick={onSyncToCloud}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-label-md font-extrabold py-2 px-4 rounded-full flex items-center gap-2 shadow-xl border border-emerald-300 transition-all cursor-pointer animate-pulse"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-2 rounded-full flex items-center justify-center gap-1 shadow-2xl border border-emerald-300 transition-all cursor-pointer animate-pulse font-mono text-xs font-black"
+              title={`Sync ${pendingSyncCount} pending submission(s) to cloud`}
             >
-              <span className="material-symbols-outlined text-lg">cloud_upload</span>
-              SYNC ({pendingSyncCount})
+              <span className="material-symbols-outlined text-base">cloud_upload</span>
+              <span className="text-[10px] font-bold">({pendingSyncCount})</span>
             </button>
-          )}
-
-          {/* Final Submission Lock Button */}
-          {submissions.length >= course.clues.length && (
-            <button
-              onClick={() => {
-                if (onSubmitData) {
-                  onSubmitData({ isSubmissionLocked: true });
-                }
-                alert("🔒 Submissions locked! Leaderboard access unlocked for your team.");
-              }}
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-label-md font-extrabold py-1.5 px-3 rounded-full flex items-center gap-1.5 shadow-xl border border-cyan-300 transition-all cursor-pointer text-xs"
-              title="Lock final team submissions to unlock Leaderboard view"
-            >
-              <span className="material-symbols-outlined text-sm">lock</span>
-              <span>Lock Submissions</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* HUD Compass & Telemetry Widget */}
         {isHudMinimized ? (
-          /* Minimized State: Small icon button at bottom center of map with hover-over tooltip */
+          /* Minimized State: Small icon button at bottom center of map */
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
             <button
               type="button"
@@ -713,30 +764,60 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
               >
                 navigation
               </span>
-              
-              {/* Hover Tooltip - NO text on screen icon except on hover */}
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center bg-slate-950/95 border border-cyan-400/60 px-3 py-1.5 rounded-xl shadow-2xl text-[11px] font-mono text-cyan-200 whitespace-nowrap pointer-events-none z-30">
-                <span className="font-bold text-white">{formatDist(distanceToTargetMeters)} {azimuthData.cardinal} ({azimuthData.bearing}°)</span>
-                <span className="text-[10px] text-slate-300">Alt: {elevationData.userElevation}m • ETA: {formattedEta}</span>
-              </div>
             </button>
           </div>
         ) : (
-          /* Maximized State: Draggable Compact HUD */
+          /* Maximized State: Draggable Compass HUD positioned at Bottom Center by default */
           <div
-            style={{ left: `${hudPos.x}px`, top: `${hudPos.y}px` }}
-            className="absolute z-20 pointer-events-auto select-none"
+            style={{
+              transform: `translate3d(${hudPos.x}px, ${hudPos.y}px, 0)`
+            }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-auto select-none transition-transform duration-75"
           >
             <div
-              onMouseDown={handleHudMouseDown}
-              className="bg-slate-950/90 backdrop-blur-md border border-cyan-400/60 rounded-2xl p-2 shadow-2xl flex items-center gap-2 font-mono text-xs text-white cursor-move"
-              title="Click and drag to reposition HUD anywhere on map"
+              className="bg-slate-950/90 backdrop-blur-md border border-cyan-400/60 rounded-2xl p-2 shadow-2xl flex items-center gap-2 font-mono text-xs text-white"
             >
-              <span className="material-symbols-outlined text-cyan-400 text-sm opacity-60">drag_indicator</span>
+              <span
+                onMouseDown={(e) => {
+                  const startX = e.clientX - hudPos.x;
+                  const startY = e.clientY - hudPos.y;
+                  const onMouseMove = (me) => {
+                    setHudPos({ x: me.clientX - startX, y: me.clientY - startY });
+                  };
+                  const onMouseUp = () => {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                  };
+                  window.addEventListener('mousemove', onMouseMove);
+                  window.addEventListener('mouseup', onMouseUp);
+                }}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  const startX = touch.clientX - hudPos.x;
+                  const startY = touch.clientY - hudPos.y;
+                  const onTouchMove = (te) => {
+                    const t = te.touches[0];
+                    setHudPos({ x: t.clientX - startX, y: t.clientY - startY });
+                  };
+                  const onTouchEnd = () => {
+                    window.removeEventListener('touchmove', onTouchMove);
+                    window.removeEventListener('touchend', onTouchEnd);
+                  };
+                  window.addEventListener('touchmove', onTouchMove);
+                  window.addEventListener('touchend', onTouchEnd);
+                }}
+                className="material-symbols-outlined text-cyan-400 text-base hover:text-white cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-800 touch-none"
+                title="Click and drag icon to move compass HUD"
+              >
+                drag_indicator
+              </span>
 
-              {/* Rotating Mini Compass Dial */}
+              {/* Rotating Mini Compass Dial - FIX: True North Pointing Arrow */}
               <div className="w-11 h-11 rounded-full bg-slate-900 border border-cyan-400/50 flex items-center justify-center relative shrink-0 shadow-inner">
-                <span className="absolute top-0.5 text-[8px] font-bold text-cyan-300">N</span>
+                {/* Fixed True North Label at Top of Compass Ring */}
+                <span className="absolute top-0.5 text-[9px] font-extrabold text-amber-300 drop-shadow">N</span>
+                
+                {/* Rotating Directional Bearing Arrow pointing to Target */}
                 <div
                   className="transition-transform duration-500 flex items-center justify-center"
                   style={{ transform: `rotate(${azimuthData.bearing}deg)` }}
@@ -778,10 +859,9 @@ export default function ClueRunner({ course, activeTeam, submissions = [], onSub
 
       </div>
 
-      {/* 4. Elevation & Route Profile Banner */}
+      {/* 4. Elevation & Route Profile Banner - Concise Header (Icon + Name + Distance) */}
       <DraggableBlock
         id="route-profile"
-        title="Route Profile & Elevation"
         icon="terrain"
         className="bg-slate-950/70 backdrop-blur-md border-emerald-400/50"
         badge={

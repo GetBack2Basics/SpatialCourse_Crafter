@@ -4,9 +4,9 @@ import { queueService } from '../../services/queueService';
 import { Camera, Image as ImageIcon, Upload, MapPin, CheckCircle2, AlertTriangle, FileText, X } from 'lucide-react';
 
 export default function SubmissionModal({ clue, userLocation, team, isOpen, onClose, onSubmit, initialMode = 'GALLERY' }) {
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [exifData, setExifData] = useState(null);
+  const [photos, setPhotos] = useState([]); // Multi-photo array: [{ url, exif }]
   const [attributes, setAttributes] = useState({});
+  const [userNotes, setUserNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   
@@ -21,6 +21,9 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
 
+  // Slideshow active photo index
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -29,7 +32,9 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
       streamRef.current = null;
     }
     if (videoRef.current) {
@@ -39,6 +44,17 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   };
 
   const startCamera = async () => {
+    // If stream is already running and active, don't restart
+    if (streamRef.current && streamRef.current.active) {
+      setIsCameraActive(true);
+      if (videoRef.current && videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch(e => console.warn(e));
+      }
+      return;
+    }
+
+    stopCamera();
     setCameraError(null);
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -105,11 +121,10 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
           timestamp: new Date().toISOString(),
           device: 'Live Stream Camera (Verified GPS)'
         };
-        setPhotoPreview(objectUrl);
-        setExifData(liveExif);
+        setPhotos(prev => [...prev, { url: objectUrl, exif: liveExif }]);
         setLocationSource('EXIF');
         setFormError(null);
-        stopCamera();
+        // Note: Keep camera ready for taking another photo if desired
       }
     }, 'image/jpeg', 0.92);
   };
@@ -120,6 +135,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
       setFormError(null);
     } else {
       stopCamera();
+      setPhotos([]);
     }
     return () => {
       stopCamera();
@@ -127,12 +143,12 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   }, [isOpen, initialMode]);
 
   useEffect(() => {
-    if (isOpen && uploadMode === 'CAMERA' && !photoPreview) {
+    if (isOpen && uploadMode === 'CAMERA') {
       startCamera();
     } else {
       stopCamera();
     }
-  }, [isOpen, uploadMode, photoPreview]);
+  }, [isOpen, uploadMode]);
 
   if (!isOpen || !clue) return null;
 
@@ -142,29 +158,40 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
 
     const parsedExif = await parsePhotoExif(file);
     if (!parsedExif || typeof parsedExif.lat !== 'number' || typeof parsedExif.lng !== 'number') {
-      setPhotoPreview(null);
-      setExifData(null);
-      setFormError("⚠️ Photo rejected! Uploaded image is missing mandatory EXIF GPS metadata. Please take a photo with GPS location tagging enabled on your camera, or use the Live Camera.");
+      setFormError("⚠️ Photo warning! One or more uploaded images missing EXIF GPS metadata. Live device GPS will be used.");
+      // Fallback EXIF with user location
+      const fallbackExif = {
+        lat: userLocation?.lat || clue.targetLocation.lat,
+        lng: userLocation?.lng || clue.targetLocation.lng,
+        timestamp: new Date().toISOString(),
+        device: 'Uploaded File (Device GPS Fallback)'
+      };
+      const objectUrl = URL.createObjectURL(file);
+      setPhotos(prev => [...prev, { url: objectUrl, exif: fallbackExif }]);
       return;
     }
 
     const objectUrl = URL.createObjectURL(file);
-    setPhotoPreview(objectUrl);
-    setExifData(parsedExif);
-    setLocationSource('EXIF'); // Automatically prefer EXIF coordinates from photo metadata
+    setPhotos(prev => [...prev, { url: objectUrl, exif: parsedExif }]);
+    setLocationSource('EXIF');
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      await processFile(f);
+    }
     e.target.value = '';
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files) {
+      const files = Array.from(e.dataTransfer.files);
+      for (const f of files) {
+        await processFile(f);
+      }
     }
   };
 
@@ -186,9 +213,11 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
   let finalLng = userLocation?.lng || clue.targetLocation.lng;
   let locationLabel = "Live Device GPS";
 
-  if (locationSource === 'EXIF' && exifData) {
-    finalLat = exifData.lat;
-    finalLng = exifData.lng;
+  const primaryExif = photos.find(p => p.exif)?.exif;
+
+  if (locationSource === 'EXIF' && primaryExif) {
+    finalLat = primaryExif.lat;
+    finalLng = primaryExif.lng;
     locationLabel = "Photo EXIF Geotag";
   } else if (locationSource === 'TARGET') {
     finalLat = clue.targetLocation.lat;
@@ -200,16 +229,8 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     e.preventDefault();
     setFormError(null);
 
-    const isGroupPhotoRequired = clue.requiresGroupPhoto !== false; // Default true per Spatial Olympics rules
-
-    if (isGroupPhotoRequired && !photoPreview) {
-      setFormError("⚠️ Mandatory Group Photo required! Please take or upload a photo showing all team members at this location.");
-      modalContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (photoPreview && (!exifData || typeof exifData.lat !== 'number' || typeof exifData.lng !== 'number')) {
-      setFormError("⚠️ Submission rejected! Uploaded photo is missing mandatory EXIF GPS metadata.");
+    if (photos.length === 0) {
+      setFormError("⚠️ Mandatory photo required! Please snap or upload at least one photo for this waypoint.");
       modalContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -229,25 +250,19 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
           lat: finalLat,
           lng: finalLng,
           accuracy: locationSource === 'EXIF' ? 1.5 : locationSource === 'TARGET' ? 0.5 : (userLocation?.accuracy || 2.8),
-          elevationMeters: userLocation?.altitude || exifData?.altitude || Math.round(15 + Math.random() * 25),
+          elevationMeters: userLocation?.altitude || primaryExif?.altitude || Math.round(15 + Math.random() * 25),
           source: locationSource
         },
-        photoUrl: photoPreview || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400',
-        isGroupPhotoVerified: Boolean(photoPreview),
+        photoUrl: photos[0]?.url || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400',
+        photos: photos.map(p => p.url),
+        isGroupPhotoVerified: Boolean(photos.length > 0),
         attributes: attributes,
+        userNotes: userNotes,
         submittedAt: new Date().toISOString(),
         exifData: {
-          ...exifData,
-          cameraMake: exifData?.make || 'Mobile Camera',
-          cameraModel: exifData?.model || 'Smartphone GPS Camera',
-          focalLength: exifData?.focalLength || '4.25mm'
-        },
-        telemetryMetadata: {
-          batteryLevel: typeof navigator !== 'undefined' && navigator.getBattery ? '85%' : '90%',
-          networkStatus: typeof navigator !== 'undefined' && navigator.onLine ? 'ONLINE' : 'OFFLINE',
-          orientation: typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? 'PORTRAIT' : 'LANDSCAPE',
-          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Mobile Browser',
-          timeSpentSeconds: Math.floor(60 + Math.random() * 180)
+          ...(primaryExif || {}),
+          cameraMake: primaryExif?.make || 'Mobile Camera',
+          cameraModel: primaryExif?.model || 'Smartphone GPS Camera'
         },
         uploadMode: uploadMode
       };
@@ -258,6 +273,7 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
       }
 
       setIsSubmitting(false);
+      stopCamera();
       onClose();
     } catch (err) {
       console.error("Submission processing error:", err);
@@ -298,17 +314,6 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
           </button>
         </div>
 
-        {/* Group Photo Mandatory Banner */}
-        {clue.requiresGroupPhoto !== false && (
-          <div className="p-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-200 flex items-center gap-2 font-mono">
-            <span className="text-lg">📸</span>
-            <div>
-              <span className="font-bold block text-emerald-400 uppercase">Group Photo Required</span>
-              <span>Submit a photo with all team members present at the location to earn full points & group verification bonus.</span>
-            </div>
-          </div>
-        )}
-
         {formError && (
           <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-xs text-rose-200 font-semibold flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
@@ -316,66 +321,44 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
           </div>
         )}
 
-        {/* Location Reference Target Photo (What to look for) */}
-        {clue.referencePhotoUrl && (
-          <div className="relative rounded-2xl overflow-hidden border border-theme bg-theme-container-high">
-            <img
-              src={clue.referencePhotoUrl}
-              alt={clue.title}
-              className="w-full h-32 object-cover"
-            />
-            <div className="absolute bottom-2 left-2 right-2 bg-theme-surface/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] font-mono text-theme-primary border border-theme flex items-center justify-between">
-              <span>Location Target Reference Photo</span>
-              <span className="text-theme-secondary font-bold uppercase">What to Look For</span>
-            </div>
-          </div>
-        )}
+
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* 1. Photo Mode Selection (Gallery Upload vs Camera) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-theme-main flex items-center gap-1.5 uppercase font-mono">
-                <Upload className="w-4 h-4 text-theme-primary" />
-                Select Photo Source
-              </span>
-              <span className="text-[10px] text-theme-sub font-mono">Phone Gallery & Laptop Supported</span>
-            </div>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-theme-container-high rounded-xl border border-theme text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setUploadMode('GALLERY')}
+              className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                uploadMode === 'GALLERY'
+                  ? 'bg-theme-primary text-theme-surface font-bold shadow-md'
+                  : 'text-theme-sub hover:text-theme-main hover:bg-theme-container'
+              }`}
+            >
+              <ImageIcon className="w-4 h-4" />
+              <span>Upload Photo</span>
+            </button>
 
-            <div className="grid grid-cols-2 gap-2 p-1 bg-theme-container-high rounded-xl border border-theme text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setUploadMode('GALLERY')}
-                className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                  uploadMode === 'GALLERY'
-                    ? 'bg-theme-primary text-theme-surface font-bold shadow-md'
-                    : 'text-theme-sub hover:text-theme-main hover:bg-theme-container'
-                }`}
-              >
-                <ImageIcon className="w-4 h-4" />
-                <span>Gallery / Laptop File</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setUploadMode('CAMERA')}
-                className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                  uploadMode === 'CAMERA'
-                    ? 'bg-theme-primary text-theme-surface font-bold shadow-md'
-                    : 'text-theme-sub hover:text-theme-main hover:bg-theme-container'
-                }`}
-              >
-                <Camera className="w-4 h-4" />
-                <span>Live Camera</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setUploadMode('CAMERA')}
+              className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                uploadMode === 'CAMERA'
+                  ? 'bg-theme-primary text-theme-surface font-bold shadow-md'
+                  : 'text-theme-sub hover:text-theme-main hover:bg-theme-container'
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              <span>Camera</span>
+            </button>
           </div>
 
           {/* Hidden Inputs */}
           <input
             ref={galleryInputRef}
             type="file"
+            multiple
             accept="image/*,image/heic,image/jpeg,image/png"
             onChange={handleFileChange}
             className="hidden"
@@ -389,35 +372,96 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
             className="hidden"
           />
 
-          {/* 2. Photo Upload / Drop Zone / Live Viewfinder */}
-          <div className="space-y-2">
-            {photoPreview ? (
-              <div className="relative rounded-2xl overflow-hidden border border-theme group">
-                <img src={photoPreview} alt="Clue submission" className="w-full h-52 object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhotoPreview(null);
-                    setExifData(null);
-                  }}
-                  className="absolute top-2 right-2 p-1.5 rounded-xl bg-theme-surface/80 text-theme-sub hover:text-theme-main border border-theme backdrop-blur-md"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+          {/* 2. Photo Upload / Multi-Photo Grid / Live Viewfinder */}
+          <div className="space-y-3">
+            
+            {/* Interactive Photo Slideshow for Taken Photos */}
+            {photos.length > 0 && (
+              <div className="space-y-2 p-3 rounded-2xl bg-slate-900 border border-emerald-500/40 font-mono shadow-inner">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm">collections</span>
+                    <span>Taken Photos Slideshow ({photos.length})</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Photo {activePhotoIndex + 1} of {photos.length}
+                  </span>
+                </div>
 
-                {exifData && (
-                  <div className="absolute bottom-2 left-2 right-2 bg-theme-surface/90 backdrop-blur-md p-2.5 rounded-xl text-[11px] font-mono text-theme-main border border-emerald-500/40 flex items-center justify-between">
-                    <div>
-                      <span className="text-emerald-400 font-bold block">EXIF Geotag Extracted:</span>
-                      <span>{exifData.lat.toFixed(5)}, {exifData.lng.toFixed(5)}</span>
+                {/* Slideshow Display Frame */}
+                {photos[activePhotoIndex] && (
+                  <div className="relative rounded-xl overflow-hidden bg-black border border-slate-800 h-52 group">
+                    <img
+                      src={photos[activePhotoIndex].url}
+                      alt={`Photo ${activePhotoIndex + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+
+                    {/* Slideshow Previous / Next Navigation Overlay */}
+                    {photos.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setActivePhotoIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1))}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/80 hover:bg-slate-900 text-white border border-slate-700 backdrop-blur-md shadow-lg transition-transform active:scale-95"
+                          title="Previous Photo"
+                        >
+                          <span className="material-symbols-outlined text-base">chevron_left</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActivePhotoIndex((prev) => (prev < photos.length - 1 ? prev + 1 : 0))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/80 hover:bg-slate-900 text-white border border-slate-700 backdrop-blur-md shadow-lg transition-transform active:scale-95"
+                          title="Next Photo"
+                        >
+                          <span className="material-symbols-outlined text-base">chevron_right</span>
+                        </button>
+                      </>
+                    )}
+
+                    {/* Delete Photo from Slideshow */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPhotos = photos.filter((_, i) => i !== activePhotoIndex);
+                        setPhotos(newPhotos);
+                        if (activePhotoIndex >= newPhotos.length) {
+                          setActivePhotoIndex(Math.max(0, newPhotos.length - 1));
+                        }
+                      }}
+                      className="absolute top-2 right-2 p-1.5 rounded-xl bg-rose-950/90 text-rose-300 hover:text-white border border-rose-500/60 backdrop-blur-md text-[10px] font-bold flex items-center gap-1 shadow"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+
+                    <div className="absolute bottom-2 left-2 bg-slate-950/90 text-[10px] text-cyan-300 px-2 py-0.5 rounded-lg border border-cyan-500/40">
+                      EXIF: {photos[activePhotoIndex].exif?.lat ? `${photos[activePhotoIndex].exif.lat.toFixed(4)}°, ${photos[activePhotoIndex].exif.lng.toFixed(4)}°` : 'Device GPS Fallback'}
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">
-                      {exifData.device || 'Verified GPS'}
-                    </span>
+                  </div>
+                )}
+
+                {/* Slideshow Thumbnails Ribbon */}
+                {photos.length > 1 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-0.5 custom-scrollbar">
+                    {photos.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActivePhotoIndex(idx)}
+                        className={`relative rounded-lg overflow-hidden shrink-0 w-12 h-12 border-2 transition-all cursor-pointer ${
+                          activePhotoIndex === idx ? 'border-emerald-400 scale-105 shadow-md' : 'border-slate-800 opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={item.url} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-            ) : uploadMode === 'CAMERA' ? (
+            )}
+
+            {uploadMode === 'CAMERA' ? (
               <div className="space-y-3">
                 <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-2xl bg-black min-h-[16rem]">
                   <video
@@ -425,12 +469,18 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-64 object-cover bg-black"
+                    className="w-full h-60 object-cover bg-black"
                   />
                   
-                  <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 z-10">
-                    <span className={`w-2 h-2 rounded-full ${isCameraActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
-                    <span>{isCameraActive ? 'LIVE STREAM CAMERA' : 'STARTING CAMERA...'}</span>
+                  {/* Clean Camera Overlay: SHOW ONLY CURRENT & WAYPOINT GPS POINTS */}
+                  <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10 font-mono text-[10px]">
+                    <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-xl text-cyan-300 border border-cyan-400/50 flex items-center gap-1.5 shadow">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                      <span>Current GPS: {userLocation?.lat.toFixed(4)}, {userLocation?.lng.toFixed(4)}</span>
+                    </div>
+                    <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-xl text-amber-300 border border-amber-400/50 shadow">
+                      <span>Waypoint GPS: {clue.targetLocation.lat.toFixed(4)}, {clue.targetLocation.lng.toFixed(4)}</span>
+                    </div>
                   </div>
 
                   {isCameraActive && (
@@ -447,61 +497,60 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
                   )}
                 </div>
 
+                {/* Direct Mobile Native Camera Launcher Button */}
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full py-3 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-mono font-extrabold text-xs uppercase tracking-wider transition-all shadow flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>📱 Launch Mobile Phone Camera App</span>
+                </button>
+
                 {cameraError && (
-                  <div className="p-4 border border-amber-500/30 rounded-2xl bg-amber-950/20 text-center space-y-2 font-mono">
+                  <div className="p-3 border border-amber-500/30 rounded-2xl bg-amber-950/20 text-center space-y-2 font-mono">
                     <div className="text-xs text-amber-300 font-bold">
                       {cameraError}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase transition-all shadow flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Camera className="w-4 h-4" />
-                      <span>Launch Phone Camera App</span>
-                    </button>
                   </div>
                 )}
-
-                <div className="flex items-center justify-between text-[11px] font-mono text-theme-sub px-1">
-                  <span>Need native app instead?</span>
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="text-emerald-400 hover:underline font-bold"
-                  >
-                    📷 Open Phone Camera App Direct
-                  </button>
-                </div>
               </div>
             ) : (
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={() => galleryInputRef.current?.click()}
-                className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center space-y-2 ${
-                  isDragOver
-                    ? 'border-theme-primary bg-theme-primary/10 scale-[0.99]'
-                    : 'border-theme hover:border-theme-primary bg-theme-container-high/60 hover:bg-theme-container-high'
-                }`}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-theme-primary/15 text-theme-primary border border-theme flex items-center justify-center">
-                  <Upload className="w-6 h-6" />
+              <div className="space-y-2">
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={() => galleryInputRef.current?.click()}
+                  className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center space-y-2 ${
+                    isDragOver
+                      ? 'border-theme-primary bg-theme-primary/10 scale-[0.99]'
+                      : 'border-theme hover:border-theme-primary bg-theme-container-high/60 hover:bg-theme-container-high'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-theme-primary/15 text-theme-primary border border-theme flex items-center justify-center shadow">
+                    <Upload className="w-6 h-6" />
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-bold text-theme-main">
+                      Tap or Drag & Drop to Upload Photos
+                    </div>
+                    <div className="text-xs text-theme-sub mt-1 font-mono">
+                      Select photos from your device gallery, files, or cloud storage
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <div className="text-xs font-bold text-theme-main">
-                    Click to Browse Gallery / Laptop File or Drag & Drop
-                  </div>
-                  <div className="text-[11px] text-theme-sub mt-1 font-mono">
-                    Supports JPG, PNG, HEIC from mobile photos or laptop disk
-                  </div>
-                </div>
-
-                <span className="inline-block px-3 py-1 rounded-full bg-theme-surface text-theme-primary border border-theme text-[10px] font-mono font-semibold mt-1">
-                  🖼️ Gallery / File Picker
-                </span>
+                {/* Direct Mobile Native File Picker Trigger Button */}
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-extrabold text-xs uppercase tracking-wider transition-all shadow flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  <span>📁 Choose Photos / Files from Phone</span>
+                </button>
               </div>
             )}
           </div>
@@ -535,10 +584,10 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
 
               <button
                 type="button"
-                disabled={!exifData}
-                onClick={() => exifData && setLocationSource('EXIF')}
+                disabled={!primaryExif}
+                onClick={() => primaryExif && setLocationSource('EXIF')}
                 className={`p-2 rounded-xl border text-left transition-all ${
-                  !exifData
+                  !primaryExif
                     ? 'opacity-40 bg-theme-container border-theme text-theme-sub cursor-not-allowed'
                     : locationSource === 'EXIF'
                     ? 'bg-emerald-950 border-emerald-500 text-emerald-300'
@@ -547,10 +596,10 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
               >
                 <div className="font-bold flex items-center justify-between">
                   <span>Photo EXIF</span>
-                  {exifData && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                  {primaryExif && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
                 </div>
                 <div className="text-[10px] truncate">
-                  {exifData ? `${exifData.lat.toFixed(4)}, ${exifData.lng.toFixed(4)}` : 'No EXIF in file'}
+                  {primaryExif ? `${primaryExif.lat.toFixed(4)}, ${primaryExif.lng.toFixed(4)}` : 'No EXIF in file'}
                 </div>
               </button>
 
@@ -608,6 +657,21 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
               ))}
             </div>
           )}
+
+          {/* 5. User Field Notes */}
+          <div className="p-3.5 rounded-2xl bg-theme-container-high border border-theme space-y-2">
+            <label className="text-xs font-bold text-theme-main uppercase font-mono flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-theme-primary" />
+              <span>User Field Notes</span>
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Add optional notes, observations, site condition comments, or team remarks..."
+              value={userNotes}
+              onChange={e => setUserNotes(e.target.value)}
+              className="w-full bg-theme-container border border-theme rounded-xl p-3 text-xs text-theme-main placeholder:text-theme-sub focus:outline-none focus:border-theme-primary font-body-sm resize-none"
+            />
+          </div>
 
           {/* Submit Button */}
           <div className="pt-2">

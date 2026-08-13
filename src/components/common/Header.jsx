@@ -105,29 +105,51 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
           </nav>
 
           {/* Mobile Header Controls */}
-          <div className="lg:hidden flex items-center gap-2">
+          <div className="lg:hidden flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* User Profile / Login Avatar */}
+            <div
+              onClick={onOpenAuthModal}
+              className="flex items-center cursor-pointer group p-0.5"
+              title={`Account Auth (${currentUser?.name || 'Login'})`}
+            >
+              <div className="w-7 h-7 rounded-full bg-theme-primary/20 text-theme-primary border border-theme flex items-center justify-center font-bold text-[11px] group-hover:ring-2 group-hover:ring-theme-primary transition-all select-none">
+                {currentUser ? (
+                  (currentUser.name || 'User')
+                    .split(' ')
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)
+                ) : (
+                  <span className="material-symbols-outlined text-[16px]">person</span>
+                )}
+              </div>
+            </div>
+
             <ThemeSwitcher compact={true} />
+            
             <button
               onClick={onOpenHelp}
-              className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary"
+              className="p-1.5 rounded-lg bg-theme-container border border-theme text-theme-primary shrink-0 cursor-pointer"
               title="System Help & Guide"
             >
-              <span className="material-symbols-outlined text-[20px]">help</span>
+              <span className="material-symbols-outlined text-[18px]">help</span>
             </button>
+            
             <button
               onClick={toggleLogs}
-              className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary"
+              className="p-1.5 rounded-lg bg-theme-container border border-theme text-theme-primary shrink-0 cursor-pointer"
               title="WebSocket Logs"
             >
-              <span className="material-symbols-outlined text-[20px]">terminal</span>
+              <span className="material-symbols-outlined text-[18px]">terminal</span>
             </button>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg bg-theme-container border border-theme text-theme-primary font-bold flex items-center gap-1"
+              className="p-1.5 rounded-lg bg-theme-container border border-theme text-theme-primary font-bold flex items-center gap-1 shrink-0 cursor-pointer"
               aria-label="Toggle mobile menu"
             >
-              <span className="material-symbols-outlined text-[24px]">
+              <span className="material-symbols-outlined text-[20px]">
                 {mobileMenuOpen ? 'close' : 'menu'}
               </span>
             </button>
@@ -138,6 +160,34 @@ export default function Header({ activeTab, setActiveTab, logCount, toggleLogs, 
         {/* Mobile Slide-down Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="lg:hidden bg-surface border-b border-border-subtle px-4 py-3 space-y-2 shadow-lg">
+            <button
+              onClick={() => {
+                onOpenAuthModal();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full text-left py-2.5 px-3.5 rounded-xl flex items-center gap-3 font-semibold bg-theme-container border border-theme text-theme-main transition-all"
+            >
+              <div className="w-7 h-7 rounded-full bg-theme-primary/20 text-theme-primary border border-theme flex items-center justify-center font-bold text-xs">
+                {currentUser ? (
+                  (currentUser.name || 'User')
+                    .split(' ')
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)
+                ) : (
+                  <span className="material-symbols-outlined text-[16px]">person</span>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold">{currentUser?.name || 'Log In / Account'}</span>
+                <span className="text-[10px] opacity-75">{currentUser ? (currentUser.email || 'Signed in') : 'Click to authenticate or switch user'}</span>
+              </div>
+              <span className="ml-auto text-[10px] bg-theme-primary/20 text-theme-primary px-2 py-0.5 rounded-full font-bold uppercase">
+                {currentUser ? 'Profile' : 'Login'}
+              </span>
+            </button>
+
             <button
               onClick={() => handleTabChange('PLAYER')}
               className={`w-full text-left py-3 px-3.5 rounded-xl flex items-center gap-3 font-semibold transition-all ${

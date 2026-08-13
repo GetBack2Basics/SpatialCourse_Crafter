@@ -1398,18 +1398,6 @@ export default function CoursePlanner({
 
                   <p className="font-body-sm text-body-sm text-text-secondary pl-2 mb-3">{clue.description}</p>
 
-                  {/* Location Reference Photo Preview in Admin Sidebar */}
-                  {clue.referencePhotoUrl && (
-                    <div className="pl-2 mb-3">
-                      <div className="relative rounded-lg overflow-hidden border border-border-subtle max-h-28 group">
-                        <img src={clue.referencePhotoUrl} alt={clue.title} className="w-full h-28 object-cover group-hover:scale-105 transition-transform" />
-                        <div className="absolute bottom-1 left-1 bg-surface/85 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-mono text-primary border border-border-subtle font-bold">
-                          Location Reference Target
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="pl-2 space-y-1.5 font-mono text-[11px]">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded uppercase font-bold tracking-wider">
