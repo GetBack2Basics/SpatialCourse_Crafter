@@ -3,16 +3,16 @@ import { parsePhotoExif } from '../../utils/geoUtils';
 import { queueService } from '../../services/queueService';
 import { Camera, Image as ImageIcon, Upload, MapPin, CheckCircle2, AlertTriangle, FileText, X } from 'lucide-react';
 
-export default function SubmissionModal({ clue, userLocation, team, isOpen, onClose, onSubmit, initialMode = 'GALLERY' }) {
+export default function SubmissionModal({ clue, userLocation, team, isOpen, onClose, onSubmit, initialMode = 'CAMERA' }) {
   const [photos, setPhotos] = useState([]); // Multi-photo array: [{ url, exif }]
   const [attributes, setAttributes] = useState({});
   const [userNotes, setUserNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   
-  // Gallery vs Camera upload mode
-  const [uploadMode, setUploadMode] = useState(initialMode); // 'GALLERY' | 'CAMERA'
-  
+  // Gallery vs Camera upload mode (Live Camera is default)
+  const [uploadMode, setUploadMode] = useState(initialMode || 'CAMERA');
+
   // Location source: 'DEVICE_GPS' | 'EXIF' | 'TARGET'
   const [locationSource, setLocationSource] = useState('DEVICE_GPS');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -115,23 +115,37 @@ export default function SubmissionModal({ clue, userLocation, team, isOpen, onCl
     canvas.toBlob((blob) => {
       if (blob) {
         const objectUrl = URL.createObjectURL(blob);
+        const timestampStr = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `SpatialPhoto_Clue${clue?.number || 1}_${timestampStr}.jpg`;
+
+        // Automatically trigger browser download to user's local Pictures/Downloads folder
+        try {
+          const downloadAnchor = document.createElement('a');
+          downloadAnchor.href = objectUrl;
+          downloadAnchor.download = fileName;
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          document.body.removeChild(downloadAnchor);
+        } catch (e) {
+          console.warn("Auto picture save notice:", e);
+        }
+
         const liveExif = {
           lat: userLocation?.lat || clue.targetLocation.lat,
           lng: userLocation?.lng || clue.targetLocation.lng,
           timestamp: new Date().toISOString(),
-          device: 'Live Stream Camera (Verified GPS)'
+          device: 'Live Stream Camera (Saved to Device)'
         };
         setPhotos(prev => [...prev, { url: objectUrl, exif: liveExif }]);
         setLocationSource('EXIF');
         setFormError(null);
-        // Note: Keep camera ready for taking another photo if desired
       }
-    }, 'image/jpeg', 0.92);
+    }, 'image/jpeg', 0.95);
   };
 
   useEffect(() => {
     if (isOpen) {
-      setUploadMode(initialMode || 'GALLERY');
+      setUploadMode(initialMode || 'CAMERA');
       setFormError(null);
     } else {
       stopCamera();

@@ -56,10 +56,18 @@ export default function AuthModal({ isOpen, onClose, currentUser, courses = [] }
   const [editOrg, setEditOrg] = useState('');
   const [editNotes, setEditNotes] = useState('');
 
+  // User Team Join Filter State
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState(courses[0]?.id || 'cairns-hilton-surveying');
+
   if (!isOpen) return null;
 
   const isSuperAdmin = authService.isSuperAdmin();
   const isAdmin = authService.isAdmin();
+
+  // Filter teams assigned to the selected project or show all if unassigned
+  const filteredTeams = authService.teams.filter(t => 
+    !t.assignedCourseIds || t.assignedCourseIds.length === 0 || t.assignedCourseIds.includes(selectedProjectFilter)
+  );
 
   const handleGoogleSignIn = async () => {
     setErrorMsg(null);
@@ -436,23 +444,44 @@ export default function AuthModal({ isOpen, onClose, currentUser, courses = [] }
                   </button>
                 </div>
 
-                {/* Team Join Request Section */}
-                <div className="pt-3 border-t border-slate-800 space-y-2">
+                {/* Team Join Request Section with Project Selection */}
+                <div className="pt-3 border-t border-slate-800 space-y-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-emerald-400 uppercase font-mono flex items-center gap-1.5">
                       <Users className="w-4 h-4" />
-                      Request to Join a Competition Team
+                      Select Project & Request to Join Team
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">Admin Approval Required</span>
                   </div>
 
+                  {/* Project Selector */}
+                  {courses && courses.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-300 font-mono uppercase">1. Select Target Competition Project</label>
+                      <select
+                        value={selectedProjectFilter}
+                        onChange={(e) => setSelectedProjectFilter(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-400"
+                      >
+                        {courses.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.title} ({c.clues?.length || 0} Waypoints)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Filtered Teams List */}
                   <div className="space-y-2">
-                    {authService.teams.length === 0 ? (
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 font-mono">
-                        No competition teams created yet. Log in as Admin to create teams.
+                    <div className="text-[10px] font-bold text-slate-300 font-mono uppercase">2. Available Teams for Selected Project</div>
+                    {filteredTeams.length === 0 ? (
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 font-mono space-y-1">
+                        <div>No active teams currently assigned to this project.</div>
+                        <div className="text-[10px] text-slate-400">Request your Event Coordinator to assign or create a team for this project.</div>
                       </div>
                     ) : (
-                      authService.teams.map(team => {
+                      filteredTeams.map(team => {
                         const isMember = (team.members || []).some(m => m.toLowerCase() === currentUser.email.toLowerCase());
                         const isPending = (team.pendingRequests || []).some(r => r.email.toLowerCase() === currentUser.email.toLowerCase());
 

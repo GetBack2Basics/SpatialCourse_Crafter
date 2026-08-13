@@ -34,22 +34,7 @@ const INITIAL_USERS = [
   }
 ];
 
-const INITIAL_TEAMS = [
-  {
-    id: "team-george-will",
-    name: "Far North GIS (George & Will)",
-    members: ["coreagc@gmail.com", "william.dean@fungis.org"],
-    pendingRequests: [],
-    assignedCourseIds: ["cairns-hilton-surveying"]
-  },
-  {
-    id: "team-spatial-explorers",
-    name: "Spatial Explorers Team",
-    members: [],
-    pendingRequests: [],
-    assignedCourseIds: ["cairns-hilton-surveying"]
-  }
-];
+const INITIAL_TEAMS = [];
 
 class AuthService {
   constructor() {

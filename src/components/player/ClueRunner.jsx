@@ -626,7 +626,7 @@ export default function ClueRunner({ course, courses = [], selectedCourseId, onS
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setModalInitialMode(isWithinRadius ? 'CAMERA' : 'GALLERY');
+                        setModalInitialMode('CAMERA');
                         setIsModalOpen(true);
                       }}
                       className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-1.5 rounded-lg flex items-center justify-center transition-transform active:scale-95 shadow cursor-pointer"
