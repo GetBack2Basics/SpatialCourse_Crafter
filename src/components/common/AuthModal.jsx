@@ -447,49 +447,55 @@ export default function AuthModal({ isOpen, onClose, currentUser, courses = [] }
                   </div>
 
                   <div className="space-y-2">
-                    {authService.teams.map(team => {
-                      const isMember = (team.members || []).some(m => m.toLowerCase() === currentUser.email.toLowerCase());
-                      const isPending = (team.pendingRequests || []).some(r => r.email.toLowerCase() === currentUser.email.toLowerCase());
+                    {authService.teams.length === 0 ? (
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 font-mono">
+                        No competition teams created yet. Log in as Admin to create teams.
+                      </div>
+                    ) : (
+                      authService.teams.map(team => {
+                        const isMember = (team.members || []).some(m => m.toLowerCase() === currentUser.email.toLowerCase());
+                        const isPending = (team.pendingRequests || []).some(r => r.email.toLowerCase() === currentUser.email.toLowerCase());
 
-                      return (
-                        <div key={team.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                          <div>
-                            <div className="font-bold text-slate-100 text-xs">{team.name}</div>
-                            <div className="text-[10px] text-slate-400 font-mono">
-                              {team.members?.length || 0} Member(s)
+                        return (
+                          <div key={team.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                            <div>
+                              <div className="font-bold text-slate-100 text-xs">{team.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                {team.members?.length || 0} Member(s)
+                              </div>
                             </div>
-                          </div>
 
-                          {isMember ? (
-                            <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold flex items-center gap-1 font-mono">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Active Member</span>
-                            </span>
-                          ) : isPending ? (
-                            <span className="px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold flex items-center gap-1 font-mono animate-pulse">
-                              <span>⏳ Request Pending Approval</span>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setErrorMsg(null);
-                                try {
-                                  authService.requestToJoinTeam(team.id, currentUser.email, currentUser.name);
-                                  setSuccessMsg(`Submitted join request to "${team.name}"! Waiting for Admin approval.`);
-                                  setTimeout(() => setSuccessMsg(null), 4000);
-                                } catch (err) {
-                                  setErrorMsg(err.message);
-                                }
-                              }}
-                              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs uppercase cursor-pointer transition-all shadow"
-                            >
-                              Request Join
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+                            {isMember ? (
+                              <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold flex items-center gap-1 font-mono">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Active Member</span>
+                              </span>
+                            ) : isPending ? (
+                              <span className="px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold flex items-center gap-1 font-mono animate-pulse">
+                                <span>⏳ Request Pending Approval</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setErrorMsg(null);
+                                  try {
+                                    authService.requestToJoinTeam(team.id, currentUser.email, currentUser.name);
+                                    setSuccessMsg(`Submitted join request to "${team.name}"! Waiting for Admin approval.`);
+                                    setTimeout(() => setSuccessMsg(null), 4000);
+                                  } catch (err) {
+                                    setErrorMsg(err.message);
+                                  }
+                                }}
+                                className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs uppercase cursor-pointer transition-all shadow"
+                              >
+                                Request Join
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>

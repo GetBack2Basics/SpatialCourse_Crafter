@@ -34,7 +34,22 @@ const INITIAL_USERS = [
   }
 ];
 
-const INITIAL_TEAMS = [];
+const INITIAL_TEAMS = [
+  {
+    id: "team-george-will",
+    name: "Far North GIS (George & Will)",
+    members: ["coreagc@gmail.com", "william.dean@fungis.org"],
+    pendingRequests: [],
+    assignedCourseIds: ["cairns-hilton-surveying"]
+  },
+  {
+    id: "team-spatial-explorers",
+    name: "Spatial Explorers Team",
+    members: [],
+    pendingRequests: [],
+    assignedCourseIds: ["cairns-hilton-surveying"]
+  }
+];
 
 class AuthService {
   constructor() {
@@ -227,7 +242,7 @@ class AuthService {
         const stored = localStorage.getItem(TEAMS_STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             localTeams = parsed;
           }
         }
